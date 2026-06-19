@@ -1,0 +1,135 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tossinvest-mcp-remote"
+version = "0.1.0"
+description = "Remote MCP server for TossInvest OpenAPI"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [
+  { name = "TossInvest MCP Remote Maintainers" },
+]
+keywords = ["toss", "securities", "openapi", "mcp", "chatgpt", "codex"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Typing :: Typed",
+]
+dependencies = [
+  "tossinvest-openapi[mcp] @ git+https://github.com/dhoon-dev/tossinvest-openapi.git@main",
+  "httpx>=0.27,<1",
+  "pydantic>=2.6,<3",
+  "mcp>=1.12,<2",
+]
+
+[project.optional-dependencies]
+http = [
+  "uvicorn>=0.30,<1",
+  "starlette>=0.37,<1",
+]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "pytest-httpx>=0.30",
+  "ruff>=0.12",
+  "ty>=0.0.1a15",
+]
+
+[project.scripts]
+tossinvest-mcp-remote = "tossinvest_mcp_remote.cli:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "pytest-httpx>=0.30",
+  "ruff>=0.12",
+  "ty>=0.0.1a15",
+]
+docs = [
+  "sphinx>=9.1,<10",
+]
+
+[project.urls]
+Homepage = "https://github.com/dhoon-dev/tossinvest-mcp-remote"
+Source = "https://github.com/dhoon-dev/tossinvest-mcp-remote"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tossinvest_mcp_remote"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/tossinvest_mcp_remote/py.typed" = "tossinvest_mcp_remote/py.typed"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/tossinvest_mcp_remote",
+  "tests",
+  "docs",
+  "examples",
+  "scripts",
+  "README.md",
+  "CHANGELOG.md",
+  "LICENSE",
+  "pyproject.toml",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "B008",
+  "COM812",
+  "D203",
+  "D213",
+  "D105",
+  "D107",
+  "EM",
+  "ISC001",
+  "PLR0913",
+  "PLR2004",
+  "TC",
+  "TRY003",
+  "TRY004",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"examples/**/*.py" = ["D", "INP001", "T201"]
+"scripts/**/*.py" = ["D", "INP001", "T201"]
+"docs/conf.py" = ["A001", "D100", "INP001"]
+"src/tossinvest_mcp_remote/credentials.py" = ["S404", "S603", "S607"]
+"src/tossinvest_mcp_remote/server.py" = ["PLC0415"]
+"src/tossinvest_mcp_remote/server_http.py" = ["PLC0415"]
+"src/tossinvest_mcp_remote/server_stdio.py" = ["PLC0415"]
+"tests/**/*.py" = ["ANN401", "D", "FBT003", "PLR2004", "S101", "S105", "S106", "S107", "SLF001"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+  "integration: tests that require live TossInvest credentials",
+  "live: tests that contact the live TossInvest API",
+  "live_order: tests that may place real orders and are skipped by default",
+]
+
+[tool.ty.environment]
+python = "./.venv"
+python-version = "3.12"

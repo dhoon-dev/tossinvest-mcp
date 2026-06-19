@@ -1,0 +1,17 @@
+[mcp_servers.tossinvest]
+command = "uvx"
+args = [
+  "--from",
+  "git+https://github.com/dhoon-dev/tossinvest-mcp-remote.git@main",
+  "tossinvest-mcp-remote",
+  "stdio",
+  "--client-id-command",
+  "/usr/bin/security find-generic-password -s tossinvest-api-key -w",
+  "--client-secret-command",
+  "/usr/bin/security find-generic-password -s tossinvest-secret-key -w",
+  "--account",
+  "12345678901",
+]
+startup_timeout_sec = 30
+tool_timeout_sec = 60
+default_tools_approval_mode = "prompt"

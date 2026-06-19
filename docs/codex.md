@@ -1,0 +1,71 @@
+# Codex Configuration
+
+Codex can use this server over STDIO or Streamable HTTP.
+
+## STDIO
+
+Add a local MCP server to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.tossinvest]
+command = "uvx"
+args = [
+  "--from",
+  "git+https://github.com/dhoon-dev/tossinvest-mcp-remote.git@main",
+  "tossinvest-mcp-remote",
+  "stdio",
+  "--client-id-command",
+  "/usr/bin/security find-generic-password -s tossinvest-api-key -w",
+  "--client-secret-command",
+  "/usr/bin/security find-generic-password -s tossinvest-secret-key -w",
+  "--account",
+  "12345678901",
+]
+startup_timeout_sec = 30
+tool_timeout_sec = 60
+default_tools_approval_mode = "prompt"
+```
+
+Codex passes `args` as literal process arguments. Do not rely on shell expansion inside
+the list.
+
+## Streamable HTTP
+
+Prefer direct `config.toml` registration for HTTP:
+
+```toml
+[mcp_servers.tossinvest]
+url = "https://your-domain.example/mcp"
+startup_timeout_sec = 30
+tool_timeout_sec = 60
+default_tools_approval_mode = "prompt"
+```
+
+With a bearer token for clients that support it:
+
+```toml
+[mcp_servers.tossinvest]
+url = "https://your-domain.example/mcp"
+bearer_token_env_var = "TOSSINVEST_MCP_BEARER_TOKEN"
+startup_timeout_sec = 30
+tool_timeout_sec = 60
+default_tools_approval_mode = "prompt"
+```
+
+Do not assume the installed Codex CLI supports `codex mcp add --url`. Check:
+
+```bash
+codex mcp --help
+```
+
+Use `/mcp` in the Codex TUI to verify active MCP servers.
+
+## OAuth Future
+
+If multi-user OAuth is added later, Codex documentation should include:
+
+```bash
+codex mcp login tossinvest
+```
+
+Milestone 1 does not implement that mode.
