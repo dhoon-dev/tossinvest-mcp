@@ -176,6 +176,30 @@ async def test_jwt_bearer_token_verifier_accepts_allowed_email(httpx_mock: HTTPX
     assert access_token.subject == "owner"
 
 
+@pytest.mark.asyncio
+async def test_jwt_bearer_token_verifier_matches_allowed_email_case_insensitively(
+    httpx_mock: HTTPXMock,
+) -> None:
+    private_key = _rsa_private_key()
+    httpx_mock.add_response(method="GET", url=JWKS_URI, json=_jwks(private_key))
+    verifier = JWTBearerTokenVerifier(
+        OAuthResourceServerConfig(
+            issuer_url=ISSUER_URL,
+            resource_url=RESOURCE_URL,
+            jwks_uri=JWKS_URI,
+            required_scopes=("tossinvest:read",),
+            allowed_emails=("owner@example.com",),
+        )
+    )
+
+    access_token = await verifier.verify_token(
+        _jwt(private_key, scope="profile tossinvest:read", email="Owner@Example.com")
+    )
+
+    assert access_token is not None
+    assert access_token.subject == "owner"
+
+
 def test_origin_validation_rejects_untrusted_origin() -> None:
     app = create_http_app(
         TossInvestRemoteServerConfig("client-id", "client-secret"),

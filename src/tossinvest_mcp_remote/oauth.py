@@ -167,7 +167,9 @@ def _principal_allowed(
 ) -> bool:
     if not allowed_subjects and not allowed_emails:
         return True
-    return subject in allowed_subjects or (email is not None and email in allowed_emails)
+    return subject in allowed_subjects or (
+        email is not None and email.casefold() in {allowed.casefold() for allowed in allowed_emails}
+    )
 
 
 def _extract_scopes(claims: dict[str, Any], scope_claims: Iterable[str]) -> list[str]:
