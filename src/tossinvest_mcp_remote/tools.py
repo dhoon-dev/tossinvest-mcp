@@ -36,6 +36,16 @@ class TossInvestRemoteTools:
     account_list_cache_getter: AccountListCacheGetter | None = None
     account_list_observer: AccountListObserver | None = None
 
+    def get_supported_openapi_version(self) -> str:
+        """Return the official OpenAPI version modeled by the SDK release."""
+        with self.client_factory() as client:
+            return client.get_supported_openapi_version()
+
+    def get_latest_openapi_version(self) -> str:
+        """Fetch and return the latest official TossInvest OpenAPI version."""
+        with self.client_factory() as client:
+            return client.get_latest_openapi_version()
+
     def list_accounts(self) -> list[dict[str, object]]:
         """List accounts available to the authenticated OAuth client."""
         cached_accounts = self._cached_accounts()

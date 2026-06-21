@@ -36,7 +36,8 @@ ACCOUNT_NO_DESCRIPTION = (
     "accounts endpoint."
 )
 SERVER_INSTRUCTIONS = (
-    "This server exposes read-only TossInvest account and market data tools by default. "
+    "This server exposes read-only TossInvest OpenAPI metadata, account, and market data tools "
+    "by default. "
     "Live order tools are registered only when explicitly enabled. "
     "It does not provide investment advice. Account-scoped tools use configured accountSeq "
     "unless account_seq is explicitly supplied. Avoid unnecessary account discovery because "
@@ -87,6 +88,7 @@ def create_server(
         transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
     )
 
+    _register_openapi_tools(server, tools)
     _register_account_tools(server, tools)
     _register_stock_tools(server, tools)
     _register_market_data_tools(server, tools)
@@ -102,20 +104,45 @@ def create_server(
     return server
 
 
+def _register_openapi_tools(server: FastMCP, tools: TossInvestRemoteTools) -> None:
+    """Register official OpenAPI version metadata tools."""
+    read_only_annotations = READ_ONLY_TOOL_ANNOTATIONS
+
+    @server.tool(annotations=read_only_annotations)
+    def get_supported_openapi_version() -> str:
+        """Return the official OpenAPI version modeled by this SDK release."""
+        return tools.get_supported_openapi_version()
+
+    @server.tool(annotations=read_only_annotations)
+    def get_latest_openapi_version() -> str:
+        """Fetch and return the latest official TossInvest OpenAPI version.
+
+        This calls /openapi-docs/latest/openapi.json without OAuth.
+        """
+        return tools.get_latest_openapi_version()
+
+
 def _register_account_tools(server: FastMCP, tools: TossInvestRemoteTools) -> None:
     """Register account lookup tools."""
     read_only_annotations = READ_ONLY_TOOL_ANNOTATIONS
 
     @server.tool(annotations=read_only_annotations)
     def list_accounts() -> list[dict[str, object]]:
-        """List accounts only when account discovery is needed."""
+        """List accounts only when account discovery is needed.
+
+        Rate limit group: ACCOUNT. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         return tools.list_accounts()
 
     @server.tool(annotations=read_only_annotations)
     def find_account_by_number(
         account_no: str = Field(description=ACCOUNT_NO_DESCRIPTION),
     ) -> dict[str, object]:
-        """Return the account matching accountNo, including its accountSeq."""
+        """Return the account matching accountNo, including its accountSeq.
+
+        Rate limit group: ACCOUNT. On 429, respect Retry-After or X-RateLimit-Reset.
+        Prefer a configured accountSeq when it is already known.
+        """
         return tools.find_account_by_number(account_no)
 
 
@@ -125,17 +152,27 @@ def _register_stock_tools(server: FastMCP, tools: TossInvestRemoteTools) -> None
 
     @server.tool(annotations=read_only_annotations)
     def get_stock(symbol: str) -> dict[str, object]:
-        """Return one stock master record."""
+        """Return one stock master record.
+
+        Rate limit group: STOCK. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         return tools.get_stock(symbol)
 
     @server.tool(annotations=read_only_annotations)
     def get_stocks(symbols: list[str]) -> list[dict[str, object]]:
-        """Return stock master records for one or more symbols."""
+        """Return stock master records for one or more symbols.
+
+        Rate limit group: STOCK. On 429, respect Retry-After or X-RateLimit-Reset.
+        Prefer one batched call over repeated single-symbol calls.
+        """
         return tools.get_stocks(symbols)
 
     @server.tool(annotations=read_only_annotations)
     def get_stock_warnings(symbol: str) -> list[dict[str, object]]:
-        """Return trading warnings for a symbol."""
+        """Return trading warnings for a symbol.
+
+        Rate limit group: STOCK. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         return tools.get_stock_warnings(symbol)
 
 
@@ -145,27 +182,47 @@ def _register_market_data_tools(server: FastMCP, tools: TossInvestRemoteTools) -
 
     @server.tool(annotations=read_only_annotations)
     def get_orderbook(symbol: str) -> dict[str, object]:
-        """Return the current orderbook for a symbol."""
+        """Return the current orderbook for a symbol.
+
+        Rate limit group: MARKET_DATA. On 429, respect Retry-After or X-RateLimit-Reset.
+        Avoid tight polling loops.
+        """
         return tools.get_orderbook(symbol)
 
     @server.tool(annotations=read_only_annotations)
     def get_price(symbol: str) -> dict[str, object]:
-        """Return the current price for one symbol."""
+        """Return the current price for one symbol.
+
+        Rate limit group: MARKET_DATA. On 429, respect Retry-After or X-RateLimit-Reset.
+        Avoid tight polling loops.
+        """
         return tools.get_price(symbol)
 
     @server.tool(annotations=read_only_annotations)
     def get_prices(symbols: list[str]) -> list[dict[str, object]]:
-        """Return current prices for one or more symbols."""
+        """Return current prices for one or more symbols.
+
+        Rate limit group: MARKET_DATA. On 429, respect Retry-After or X-RateLimit-Reset.
+        Prefer one batched call over repeated single-symbol calls.
+        """
         return tools.get_prices(symbols)
 
     @server.tool(annotations=read_only_annotations)
     def get_trades(symbol: str, count: int | None = None) -> list[dict[str, object]]:
-        """Return recent trades for a symbol."""
+        """Return recent trades for a symbol.
+
+        Rate limit group: MARKET_DATA. On 429, respect Retry-After or X-RateLimit-Reset.
+        Avoid tight polling loops.
+        """
         return tools.get_trades(symbol, count=count)
 
     @server.tool(annotations=read_only_annotations)
     def get_price_limit(symbol: str) -> dict[str, object]:
-        """Return upper and lower price limits for a symbol."""
+        """Return upper and lower price limits for a symbol.
+
+        Rate limit group: MARKET_DATA. On 429, respect Retry-After or X-RateLimit-Reset.
+        Avoid tight polling loops.
+        """
         return tools.get_price_limit(symbol)
 
     @server.tool(annotations=read_only_annotations)
@@ -177,7 +234,11 @@ def _register_market_data_tools(server: FastMCP, tools: TossInvestRemoteTools) -
         before: str | None = None,
         adjusted: bool | None = None,
     ) -> dict[str, object]:
-        """Return candle data for a symbol and interval."""
+        """Return candle data for a symbol and interval.
+
+        Rate limit group: MARKET_DATA_CHART. On 429, respect Retry-After or
+        X-RateLimit-Reset. Avoid tight polling loops.
+        """
         return tools.get_candles(
             symbol,
             interval=interval,
@@ -197,7 +258,10 @@ def _register_market_info_tools(server: FastMCP, tools: TossInvestRemoteTools) -
         quote_currency: CurrencyCode,
         date_time: str | None = None,
     ) -> dict[str, object]:
-        """Return an exchange rate between two supported currencies."""
+        """Return an exchange rate between two supported currencies.
+
+        Rate limit group: MARKET_INFO. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         return tools.get_exchange_rate(
             base_currency=base_currency,
             quote_currency=quote_currency,
@@ -206,12 +270,18 @@ def _register_market_info_tools(server: FastMCP, tools: TossInvestRemoteTools) -
 
     @server.tool(annotations=read_only_annotations)
     def get_kr_market_calendar(date: str | None = None) -> dict[str, object]:
-        """Return Korean market calendar information."""
+        """Return Korean market calendar information.
+
+        Rate limit group: MARKET_INFO. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         return tools.get_kr_market_calendar(date=date)
 
     @server.tool(annotations=read_only_annotations)
     def get_us_market_calendar(date: str | None = None) -> dict[str, object]:
-        """Return US market calendar information."""
+        """Return US market calendar information.
+
+        Rate limit group: MARKET_INFO. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         return tools.get_us_market_calendar(date=date)
 
 
@@ -224,7 +294,10 @@ def _register_account_scoped_tools(server: FastMCP, tools: TossInvestRemoteTools
         symbol: str | None = None,
         account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
     ) -> dict[str, object]:
-        """Return holdings using the configured default accountSeq or an account_seq override."""
+        """Return holdings using the configured default accountSeq or an account_seq override.
+
+        Rate limit group: ASSET. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         return tools.get_holdings(symbol=symbol, account_seq=account_seq)
 
     @server.tool(annotations=read_only_annotations)
@@ -237,7 +310,11 @@ def _register_account_scoped_tools(server: FastMCP, tools: TossInvestRemoteTools
         limit: int | None = None,
         account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
     ) -> dict[str, object]:
-        """List orders using the configured default accountSeq or an account_seq override."""
+        """List orders using the configured default accountSeq or an account_seq override.
+
+        Rate limit group: ORDER_HISTORY. On 429, respect Retry-After or
+        X-RateLimit-Reset. Prefer status=OPEN when only active orders are needed.
+        """
         return tools.list_orders(
             status=status,
             symbol=symbol,
@@ -253,7 +330,10 @@ def _register_account_scoped_tools(server: FastMCP, tools: TossInvestRemoteTools
         order_id: str,
         account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
     ) -> dict[str, object]:
-        """Return one order using the configured default accountSeq or an account_seq override."""
+        """Return one order using the configured default accountSeq or an account_seq override.
+
+        Rate limit group: ORDER_HISTORY. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         return tools.get_order(order_id, account_seq=account_seq)
 
     @server.tool(annotations=read_only_annotations)
@@ -261,7 +341,10 @@ def _register_account_scoped_tools(server: FastMCP, tools: TossInvestRemoteTools
         currency: CurrencyCode,
         account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
     ) -> dict[str, object]:
-        """Return cash buying power using the configured default accountSeq or an override."""
+        """Return cash buying power using the configured default accountSeq or an override.
+
+        Rate limit group: ORDER_INFO. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         return tools.get_buying_power(currency=currency, account_seq=account_seq)
 
     @server.tool(annotations=read_only_annotations)
@@ -269,14 +352,20 @@ def _register_account_scoped_tools(server: FastMCP, tools: TossInvestRemoteTools
         symbol: str,
         account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
     ) -> dict[str, object]:
-        """Return sellable quantity using the configured default accountSeq or an override."""
+        """Return sellable quantity using the configured default accountSeq or an override.
+
+        Rate limit group: ORDER_INFO. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         return tools.get_sellable_quantity(symbol=symbol, account_seq=account_seq)
 
     @server.tool(annotations=read_only_annotations)
     def get_commissions(
         account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
     ) -> list[dict[str, object]]:
-        """Return commissions using the configured default accountSeq or an account_seq override."""
+        """Return commissions using the configured default accountSeq or an account_seq override.
+
+        Rate limit group: ORDER_INFO. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         return tools.get_commissions(account_seq=account_seq)
 
 
@@ -303,7 +392,10 @@ def _register_live_order_tools(
         confirm_high_value_order: bool | None = None,
         account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
     ) -> dict[str, object]:
-        """Submit a live order using the configured default accountSeq or an override."""
+        """Submit a live order using the configured default accountSeq or an override.
+
+        Rate limit group: ORDER. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         _authorize_live_order(required_scopes, allow_local_live_orders=allow_local_live_orders)
         return tools.create_order(
             symbol=symbol,
@@ -328,7 +420,10 @@ def _register_live_order_tools(
         confirm_high_value_order: bool | None = None,
         account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
     ) -> dict[str, object]:
-        """Modify a live order using the configured default accountSeq or an override."""
+        """Modify a live order using the configured default accountSeq or an override.
+
+        Rate limit group: ORDER. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         _authorize_live_order(required_scopes, allow_local_live_orders=allow_local_live_orders)
         return tools.modify_order(
             order_id,
@@ -344,7 +439,10 @@ def _register_live_order_tools(
         order_id: str,
         account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
     ) -> dict[str, object]:
-        """Cancel a live order using the configured default accountSeq or an override."""
+        """Cancel a live order using the configured default accountSeq or an override.
+
+        Rate limit group: ORDER. On 429, respect Retry-After or X-RateLimit-Reset.
+        """
         _authorize_live_order(required_scopes, allow_local_live_orders=allow_local_live_orders)
         return tools.cancel_order(order_id, account_seq=account_seq)
 

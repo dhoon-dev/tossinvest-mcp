@@ -51,6 +51,8 @@ async def test_create_server_registers_read_only_tools_only() -> None:
     server = create_server(TossInvestRemoteServerConfig("client-id", "client-secret"))
     tool_names = {tool.name for tool in await server.list_tools()}
 
+    assert "get_supported_openapi_version" in tool_names
+    assert "get_latest_openapi_version" in tool_names
     assert "list_accounts" in tool_names
     assert "find_account_by_number" in tool_names
     assert "get_price" in tool_names
@@ -91,6 +93,67 @@ async def test_read_only_tool_schemas_expose_sdk_enums() -> None:
         "USD",
     ]
     assert _property_enum(tools["get_buying_power"].inputSchema, "currency") == ["KRW", "USD"]
+
+
+async def test_openapi_version_tool_schemas_are_argument_free() -> None:
+    pytest.importorskip("mcp.server.fastmcp")
+
+    server = create_server(TossInvestRemoteServerConfig("client-id", "client-secret"))
+    tools = {tool.name: tool for tool in await server.list_tools()}
+
+    for tool_name in ("get_supported_openapi_version", "get_latest_openapi_version"):
+        schema = tools[tool_name].inputSchema
+        assert schema.get("properties") == {}
+        assert schema.get("required", []) == []
+        annotations = tools[tool_name].annotations
+        assert annotations is not None
+        assert annotations.readOnlyHint is True
+
+
+async def test_mcp_tool_descriptions_expose_rate_limit_groups() -> None:
+    pytest.importorskip("mcp.server.fastmcp")
+
+    server = create_server(
+        TossInvestRemoteServerConfig(
+            "client-id",
+            "client-secret",
+            enable_live_orders=True,
+            live_order_required_scopes=("tossinvest:trade",),
+        )
+    )
+    tools = {tool.name: tool for tool in await server.list_tools()}
+    expected_groups = {
+        "list_accounts": "ACCOUNT",
+        "find_account_by_number": "ACCOUNT",
+        "get_stock": "STOCK",
+        "get_stocks": "STOCK",
+        "get_stock_warnings": "STOCK",
+        "get_orderbook": "MARKET_DATA",
+        "get_price": "MARKET_DATA",
+        "get_prices": "MARKET_DATA",
+        "get_trades": "MARKET_DATA",
+        "get_price_limit": "MARKET_DATA",
+        "get_candles": "MARKET_DATA_CHART",
+        "get_exchange_rate": "MARKET_INFO",
+        "get_kr_market_calendar": "MARKET_INFO",
+        "get_us_market_calendar": "MARKET_INFO",
+        "get_holdings": "ASSET",
+        "list_orders": "ORDER_HISTORY",
+        "get_order": "ORDER_HISTORY",
+        "get_buying_power": "ORDER_INFO",
+        "get_sellable_quantity": "ORDER_INFO",
+        "get_commissions": "ORDER_INFO",
+        "create_order": "ORDER",
+        "modify_order": "ORDER",
+        "cancel_order": "ORDER",
+    }
+
+    for tool_name, group in expected_groups.items():
+        description = tools[tool_name].description or ""
+        assert f"Rate limit group: {group}" in description
+        assert "429" in description
+        assert "Retry-After" in description
+        assert "X-RateLimit-Reset" in description
 
 
 async def test_live_order_tools_require_explicit_opt_in() -> None:

@@ -23,7 +23,7 @@ Development currently uses the public HTTPS Git dependency pinned to the SDK rel
 
 ```toml
 dependencies = [
-  "tossinvest-openapi[mcp] @ git+https://github.com/dhoon-dev/tossinvest-openapi.git@v1.0.2",
+  "tossinvest-openapi[mcp] @ git+https://github.com/dhoon-dev/tossinvest-openapi.git@v1.1.0",
 ]
 ```
 
@@ -31,7 +31,7 @@ When a matching PyPI package is published, deployments can use PyPI:
 
 ```toml
 dependencies = [
-  "tossinvest-openapi[mcp]>=1.0.2",
+  "tossinvest-openapi[mcp]>=1.1.0",
 ]
 ```
 
@@ -195,6 +195,7 @@ See [docs/codex.md](docs/codex.md).
 
 The default tool list is read-only:
 
+- OpenAPI metadata: `get_supported_openapi_version`, `get_latest_openapi_version`
 - account lookup: `list_accounts`, `find_account_by_number`
 - stock information: `get_stock`, `get_stocks`, `get_stock_warnings`
 - market data: `get_orderbook`, `get_price`, `get_prices`, `get_trades`,

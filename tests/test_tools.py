@@ -158,6 +158,12 @@ class _FakeClient:
         self.orders = _Orders()
         self.closed = False
 
+    def get_supported_openapi_version(self) -> str:
+        return "1.1.1"
+
+    def get_latest_openapi_version(self) -> str:
+        return "1.1.2"
+
 
 class _FakeClientContext(AbstractContextManager[_FakeClient]):
     def __init__(self, client: _FakeClient) -> None:
@@ -204,6 +210,14 @@ def test_market_data_tool_does_not_discover_accounts() -> None:
     assert tools.get_price("005930")["lastPrice"] == "72000"
 
     assert client.accounts.calls == 0
+
+
+def test_openapi_version_tools_call_sdk_client() -> None:
+    client = _FakeClient()
+    tools = TossInvestRemoteTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
+
+    assert tools.get_supported_openapi_version() == "1.1.1"
+    assert tools.get_latest_openapi_version() == "1.1.2"
 
 
 def test_account_scoped_tools_forward_account_override() -> None:
