@@ -27,6 +27,11 @@ repository must be written in English unless a user explicitly asks for a transl
   documentation.
 - Keep STDIO stdout protocol-clean. Diagnostics and logs must go to stderr.
 
+## Repo-Local Codex Skills
+
+- Use `$toss-bump-version` for release version bumps.
+- Use `$toss-commit-changes` when staging and creating commits in this repo.
+
 ## Quality Gate
 
 Run the focused command for the change first. Before handing off broad changes, run:

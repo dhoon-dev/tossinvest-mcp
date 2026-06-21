@@ -1,0 +1,4 @@
+interface:
+  display_name: "Toss Version Bump"
+  short_description: "Bump this repo release version"
+  default_prompt: "Use $toss-bump-version to bump this repository to the next patch version."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Toss Commit Changes"
+  short_description: "Commit changes with repo rules"
+  default_prompt: "Use $toss-commit-changes to create a compliant commit for the staged repository changes."
