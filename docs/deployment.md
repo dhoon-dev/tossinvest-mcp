@@ -50,3 +50,13 @@ https://your-domain.example/healthz -> http://app:8000/healthz
 
 For local development, bind to `127.0.0.1`. Use `0.0.0.0` only for containers or
 reverse proxy deployments where exposure is intentional.
+
+## Compose Examples
+
+Docker Compose examples live under `examples/compose`:
+
+- `examples/compose/traefik/compose.yaml` for an existing Traefik deployment.
+- `examples/compose/nginx/compose.yaml` for a generic Nginx reverse proxy.
+
+Copy the matching proxy-specific env example to `.env`, fill only the values
+for the selected reverse proxy, and keep secret files outside version control.

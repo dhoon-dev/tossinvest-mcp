@@ -1,0 +1,87 @@
+name: tossinvest-mcp-traefik
+
+services:
+  tossinvest-mcp:
+    image: ${TOSSINVEST_MCP_IMAGE:-tossinvest-mcp-remote:latest}
+    build:
+      context: ${TOSSINVEST_MCP_BUILD_CONTEXT:-../../..}
+      dockerfile_inline: |
+        FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+
+        ENV PYTHONUNBUFFERED=1 \
+            UV_COMPILE_BYTECODE=1 \
+            UV_LINK_MODE=copy
+
+        WORKDIR /app
+
+        RUN apt-get update \
+          && apt-get install -y --no-install-recommends ca-certificates git \
+          && rm -rf /var/lib/apt/lists/*
+
+        COPY pyproject.toml uv.lock README.md CHANGELOG.md LICENSE ./
+        COPY src ./src
+
+        RUN uv sync --locked --extra http --no-dev --no-editable
+
+        ENV PATH="/app/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        EXPOSE 8000
+
+        ENTRYPOINT ["tossinvest-mcp-remote"]
+    restart: unless-stopped
+    networks:
+      - proxy
+    secrets:
+      - tossinvest_client_id
+      - tossinvest_client_secret
+    environment:
+      TOSSINVEST_ACCOUNT_NO: ${TOSSINVEST_ACCOUNT_NO:-}
+      TOSSINVEST_ACCOUNT_SEQ: ${TOSSINVEST_ACCOUNT_SEQ:-}
+      TOSSINVEST_MCP_OAUTH_ISSUER_URL: ${TOSSINVEST_MCP_OAUTH_ISSUER_URL:?set TOSSINVEST_MCP_OAUTH_ISSUER_URL}
+      TOSSINVEST_MCP_OAUTH_RESOURCE_URL: ${TOSSINVEST_MCP_OAUTH_RESOURCE_URL:?set TOSSINVEST_MCP_OAUTH_RESOURCE_URL}
+      TOSSINVEST_MCP_OAUTH_JWKS_URI: ${TOSSINVEST_MCP_OAUTH_JWKS_URI:?set TOSSINVEST_MCP_OAUTH_JWKS_URI}
+      TOSSINVEST_MCP_OAUTH_AUDIENCES: ${TOSSINVEST_MCP_OAUTH_AUDIENCES:-}
+      TOSSINVEST_MCP_OAUTH_REQUIRED_SCOPES: ${TOSSINVEST_MCP_OAUTH_REQUIRED_SCOPES:-tossinvest:read}
+      TOSSINVEST_MCP_OAUTH_ALLOWED_SUBJECTS: ${TOSSINVEST_MCP_OAUTH_ALLOWED_SUBJECTS:-}
+      TOSSINVEST_MCP_OAUTH_ALLOWED_EMAILS: ${TOSSINVEST_MCP_OAUTH_ALLOWED_EMAILS:-}
+      TOSSINVEST_MCP_OAUTH_ALGORITHMS: ${TOSSINVEST_MCP_OAUTH_ALGORITHMS:-RS256}
+    command:
+      - serve-http
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --trusted-proxy
+      - ${TOSSINVEST_MCP_TRUSTED_PROXY_CIDR:?set TOSSINVEST_MCP_TRUSTED_PROXY_CIDR}
+      - --client-id-command
+      - cat /run/secrets/tossinvest_client_id
+      - --client-secret-command
+      - cat /run/secrets/tossinvest_client_secret
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2).read()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:?set TRAEFIK_NETWORK}"
+      - "traefik.http.routers.tossinvest-mcp.rule=Host(`${TOSSINVEST_MCP_DOMAIN:?set TOSSINVEST_MCP_DOMAIN}`) && (PathPrefix(`/mcp`) || PathPrefix(`/.well-known/oauth-protected-resource`))"
+      - "traefik.http.routers.tossinvest-mcp.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.tossinvest-mcp.tls=true"
+      - "traefik.http.routers.tossinvest-mcp.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.services.tossinvest-mcp.loadbalancer.server.port=8000"
+
+secrets:
+  tossinvest_client_id:
+    file: ${TOSSINVEST_CLIENT_ID_FILE:?set TOSSINVEST_CLIENT_ID_FILE}
+  tossinvest_client_secret:
+    file: ${TOSSINVEST_CLIENT_SECRET_FILE:?set TOSSINVEST_CLIENT_SECRET_FILE}
+
+networks:
+  proxy:
+    external: true
+    name: ${TRAEFIK_NETWORK:?set TRAEFIK_NETWORK}
