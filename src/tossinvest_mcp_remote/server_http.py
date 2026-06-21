@@ -16,8 +16,9 @@ from starlette.routing import Mount, Route
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from .config import TossInvestRemoteServerConfig
+from .errors import TossInvestMCPRemoteConfigError
 from .health import healthz
-from .oauth import OAuthResourceServerConfig, create_mcp_resource_server_auth
+from .oauth import MCPResourceServerAuth, OAuthResourceServerConfig, create_mcp_resource_server_auth
 from .server import create_server
 
 
@@ -39,6 +40,11 @@ def create_http_app(
     http_config: HTTPServerConfig | None = None,
 ) -> Starlette:
     """Create a Starlette app exposing `/mcp` and `/healthz`."""
+    if config.enable_live_orders and config.allow_stdio_live_orders:
+        raise TossInvestMCPRemoteConfigError(
+            "Use --live-order-required-scope for HTTP live order tools. "
+            "--allow-stdio-live-orders is only for local STDIO deployments."
+        )
     resolved_http_config = http_config or HTTPServerConfig()
     mcp_auth = (
         create_mcp_resource_server_auth(resolved_http_config.oauth)
@@ -75,11 +81,13 @@ def create_http_app(
             ),
         ),
     ]
+    routes = [
+        Route("/healthz", healthz, methods=["GET"]),
+        *_protected_resource_metadata_routes(config, resolved_http_config, mcp_auth),
+        Mount("/", app=mcp_app),
+    ]
     return Starlette(
-        routes=[
-            Route("/healthz", healthz, methods=["GET"]),
-            Mount("/", app=mcp_app),
-        ],
+        routes=routes,
         middleware=middleware,
         lifespan=lifespan,
     )
@@ -182,6 +190,41 @@ class TrustedForwardedHeadersMiddleware:
 def _is_mcp_path(scope: Scope) -> bool:
     path = str(scope.get("path", ""))
     return path == "/mcp" or path.startswith("/mcp/")
+
+
+def _protected_resource_metadata_routes(
+    config: TossInvestRemoteServerConfig,
+    http_config: HTTPServerConfig,
+    mcp_auth: MCPResourceServerAuth | None,
+) -> list[Route]:
+    if mcp_auth is None or http_config.oauth is None:
+        return []
+    from mcp.server.auth.routes import create_protected_resource_routes
+
+    auth_settings = http_config.oauth.auth_settings()
+    if auth_settings.resource_server_url is None:
+        return []
+    live_order_scopes = config.live_order_required_scopes if config.enable_live_orders else ()
+    scopes_supported = _merged_scopes(
+        http_config.oauth.required_scopes,
+        live_order_scopes,
+    )
+    return create_protected_resource_routes(
+        resource_url=auth_settings.resource_server_url,
+        authorization_servers=[auth_settings.issuer_url],
+        scopes_supported=scopes_supported or None,
+    )
+
+
+def _merged_scopes(*scope_groups: Sequence[str]) -> list[str]:
+    scopes: list[str] = []
+    seen: set[str] = set()
+    for scope_group in scope_groups:
+        for scope in scope_group:
+            if scope not in seen:
+                scopes.append(scope)
+                seen.add(scope)
+    return scopes
 
 
 def _first_header_value(value: str | None) -> str | None:

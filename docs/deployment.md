@@ -2,12 +2,24 @@
 
 ## Single-User Personal Server
 
-Single-user mode is the milestone-1 default. One TossInvest credential set is
-configured server-wide. ChatGPT and Codex clients share that configured account
-context.
+Single-user mode is the default. One TossInvest credential set is configured
+server-wide. ChatGPT and Codex clients share that configured account context.
 
 Anyone who can access `/mcp` can access the configured account data. Public exposure
 requires HTTPS and access control.
+
+Live order tools are disabled by default. If you enable them, configure a distinct
+tool-level OAuth scope with `--live-order-required-scope`. A single `/mcp` endpoint
+can require `tossinvest:read` globally while requiring `tossinvest:trade` only for
+`create_order`, `modify_order`, and `cancel_order`.
+
+For local Codex over STDIO, live order tools can instead be enabled with
+`--enable-live-orders --allow-stdio-live-orders`. This is a local opt-in and should
+not be used as an HTTP access-control substitute.
+
+For either transport, `--require-live-order-confirmation` makes live order tools
+return pending confirmations. The final `confirm_live_order` tool is the only call
+that sends create, modify, or cancel requests to TossInvest.
 
 Recommended controls:
 
@@ -31,7 +43,10 @@ uv run tossinvest-mcp-remote serve-http \
   --oauth-resource-url "https://your-domain.example/mcp" \
   --oauth-jwks-uri "https://auth.example.com/realms/tossinvest/protocol/openid-connect/certs" \
   --oauth-required-scope "tossinvest:read" \
-  --oauth-allowed-email "you@example.com"
+  --live-order-required-scope "tossinvest:trade" \
+  --oauth-allowed-email "you@example.com" \
+  --require-live-order-confirmation \
+  --enable-live-orders
 ```
 
 The server rejects missing or invalid bearer tokens, validates issuer and audience,

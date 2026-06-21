@@ -12,7 +12,11 @@ from pydantic import AnyHttpUrl
 from tossinvest import __version__ as tossinvest_sdk_version
 
 from ._version import __version__
-from .config import DEFAULT_ACCOUNT_CACHE_TTL, TossInvestRemoteServerConfig
+from .config import (
+    DEFAULT_ACCOUNT_CACHE_TTL,
+    DEFAULT_LIVE_ORDER_CONFIRMATION_TTL,
+    TossInvestRemoteServerConfig,
+)
 from .credentials import (
     DEFAULT_CREDENTIAL_HELPER_TIMEOUT,
     resolve_credential,
@@ -32,9 +36,19 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
     stdio_parser = subparsers.add_parser("stdio", help="Run MCP over STDIO.")
     _add_common_server_args(stdio_parser)
+    stdio_parser.add_argument(
+        "--allow-stdio-live-orders",
+        action="store_true",
+        default=_env_flag(os.getenv("TOSSINVEST_MCP_ALLOW_STDIO_LIVE_ORDERS")),
+        help=(
+            "Allow live order tools over local STDIO without OAuth scope checks. "
+            "Use only for a trusted local Codex configuration."
+        ),
+    )
 
     http_parser = subparsers.add_parser("serve-http", help="Run MCP over Streamable HTTP.")
     _add_common_server_args(http_parser)
+    http_parser.set_defaults(allow_stdio_live_orders=False)
     http_parser.add_argument("--host", default="127.0.0.1", help="HTTP bind host.")
     http_parser.add_argument("--port", default=8000, type=int, help="HTTP bind port.")
     http_parser.add_argument(
@@ -98,6 +112,11 @@ def config_from_args(args: argparse.Namespace) -> TossInvestRemoteServerConfig:
         max_retries=args.max_retries,
         user_agent=args.user_agent,
         account_cache_ttl=args.account_cache_ttl,
+        enable_live_orders=args.enable_live_orders,
+        live_order_required_scopes=tuple(args.live_order_required_scope),
+        allow_stdio_live_orders=args.allow_stdio_live_orders,
+        require_live_order_confirmation=args.require_live_order_confirmation,
+        live_order_confirmation_ttl=args.live_order_confirmation_ttl,
         mode=args.mode,
     )
 
@@ -219,6 +238,39 @@ def _add_common_server_args(parser: argparse.ArgumentParser) -> None:
         default="single_user",
         help="Authentication mode. Multi-user OAuth is reserved for a future milestone.",
     )
+    parser.add_argument(
+        "--enable-live-orders",
+        action="store_true",
+        default=_env_flag(os.getenv("TOSSINVEST_MCP_ENABLE_LIVE_ORDERS")),
+        help="Register live order creation, modification, and cancellation tools.",
+    )
+    parser.add_argument(
+        "--live-order-required-scope",
+        action="append",
+        default=_split_env_values(os.getenv("TOSSINVEST_MCP_LIVE_ORDER_REQUIRED_SCOPES")),
+        help=(
+            "OAuth scope required only for live order tools. May be repeated. "
+            "Use with --enable-live-orders for single-endpoint tool-level authorization."
+        ),
+    )
+    parser.add_argument(
+        "--require-live-order-confirmation",
+        action="store_true",
+        default=_env_flag(os.getenv("TOSSINVEST_MCP_REQUIRE_LIVE_ORDER_CONFIRMATION")),
+        help=(
+            "Make live order tools create pending confirmations. "
+            "Only confirm_live_order submits the live order."
+        ),
+    )
+    parser.add_argument(
+        "--live-order-confirmation-ttl",
+        default=_env_float(
+            os.getenv("TOSSINVEST_MCP_LIVE_ORDER_CONFIRMATION_TTL"),
+            DEFAULT_LIVE_ORDER_CONFIRMATION_TTL,
+        ),
+        type=float,
+        help="Live order confirmation TTL in seconds.",
+    )
 
 
 def _add_oauth_args(parser: argparse.ArgumentParser) -> None:
@@ -329,6 +381,16 @@ def _split_env_values(value: str | None) -> list[str]:
     if value is None:
         return []
     return [item for item in value.replace(",", " ").split() if item]
+
+
+def _env_flag(value: str | None) -> bool:
+    return value is not None and value.strip().casefold() in {"1", "true", "yes", "on"}
+
+
+def _env_float(value: str | None, default: float) -> float:
+    if value is None or not value.strip():
+        return default
+    return float(value)
 
 
 def _print_version() -> None:

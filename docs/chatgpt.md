@@ -1,8 +1,7 @@
 # ChatGPT Apps and Connectors
 
-Milestone 1 is a data-only MCP app for personal single-user deployments. It exposes
-MCP tools only. It does not serve an iframe UI, widget resources, or custom UI
-components.
+This is a data-only MCP app for personal single-user deployments. It exposes MCP tools
+only. It does not serve an iframe UI, widget resources, or custom UI components.
 
 ## Endpoint
 
@@ -31,7 +30,7 @@ https://your-domain.example/healthz -> http://app:8000/healthz
 7. Select OAuth authentication when your deployment uses the built-in resource-server
    mode.
 8. Create the connector.
-9. Verify that the expected read-only tool list appears.
+9. Verify that the expected tool list appears.
 10. Refresh metadata after changing tools or descriptions.
 
 ## Authentication Notes
@@ -52,7 +51,10 @@ Example server options:
 --oauth-jwks-uri "https://auth.example.com/realms/tossinvest/protocol/openid-connect/certs"
 --oauth-audience "https://your-domain.example/mcp"
 --oauth-required-scope "tossinvest:read"
+--live-order-required-scope "tossinvest:trade"
 --oauth-allowed-email "you@example.com"
+--require-live-order-confirmation
+--enable-live-orders
 ```
 
 The issuer URL must match the token `iss` claim exactly. The audience defaults to the
@@ -70,4 +72,9 @@ access the server.
 ## Safety Notes
 
 The server exposes financial account and market data. It does not provide investment
-advice and does not include live order tools in milestone 1.
+advice. HTTP live order tools are disabled by default and require both
+`--enable-live-orders` and at least one `--live-order-required-scope`. The configured
+live-order scopes are checked only for `create_order`, `modify_order`, and
+`cancel_order`. Add `--require-live-order-confirmation` to make those tools create
+short-lived pending confirmations; only `confirm_live_order` sends the final request
+to TossInvest.

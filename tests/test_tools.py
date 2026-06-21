@@ -9,6 +9,10 @@ from tossinvest import (
     Account,
     BuyingPowerResponse,
     HoldingsOverview,
+    OrderCreateRequest,
+    OrderModifyRequest,
+    OrderOperationResponse,
+    OrderResponse,
     PaginatedOrderResponse,
     PriceResponse,
 )
@@ -75,6 +79,10 @@ class _Assets:
 class _Orders:
     account: str | int | None = None
     listed_status: str | None = None
+    created_request: OrderCreateRequest | None = None
+    modified_order_id: str | None = None
+    modified_request: OrderModifyRequest | None = None
+    canceled_order_id: str | None = None
 
     def list_orders(
         self,
@@ -108,6 +116,38 @@ class _Orders:
         return BuyingPowerResponse.model_validate(
             {"currency": currency, "cashBuyingPower": "100000"}
         )
+
+    def create_order(
+        self,
+        request: OrderCreateRequest,
+        *,
+        account: str | int | None = None,
+    ) -> OrderResponse:
+        self.account = account
+        self.created_request = request
+        return OrderResponse.model_validate({"orderId": "order-1", "clientOrderId": "client-1"})
+
+    def modify_order(
+        self,
+        order_id: str,
+        request: OrderModifyRequest,
+        *,
+        account: str | int | None = None,
+    ) -> OrderOperationResponse:
+        self.account = account
+        self.modified_order_id = order_id
+        self.modified_request = request
+        return OrderOperationResponse.model_validate({"orderId": order_id})
+
+    def cancel_order(
+        self,
+        order_id: str,
+        *,
+        account: str | int | None = None,
+    ) -> OrderOperationResponse:
+        self.account = account
+        self.canceled_order_id = order_id
+        return OrderOperationResponse.model_validate({"orderId": order_id})
 
 
 class _FakeClient:
@@ -185,6 +225,91 @@ def test_list_orders_defaults_to_open_status() -> None:
     assert result == {"orders": [], "hasNext": False}
     assert client.orders.listed_status == "OPEN"
     assert client.orders.account == "7"
+
+
+def test_live_order_tools_build_sdk_requests_and_forward_account() -> None:
+    client = _FakeClient()
+    tools = TossInvestRemoteTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
+
+    created = tools.create_order(
+        symbol="005930",
+        side="BUY",
+        order_type="LIMIT",
+        quantity="1",
+        price="72000",
+        client_order_id="client-1",
+        account_seq="7",
+    )
+    modified = tools.modify_order(
+        "order-1",
+        order_type="LIMIT",
+        quantity="2",
+        price="71000",
+        account_seq="7",
+    )
+    canceled = tools.cancel_order("order-1", account_seq="7")
+
+    assert created == {"orderId": "order-1", "clientOrderId": "client-1"}
+    assert modified == {"orderId": "order-1"}
+    assert canceled == {"orderId": "order-1"}
+    assert client.orders.account == "7"
+    assert client.orders.created_request is not None
+    assert client.orders.created_request.model_dump(by_alias=True, exclude_none=True) == {
+        "clientOrderId": "client-1",
+        "symbol": "005930",
+        "side": "BUY",
+        "orderType": "LIMIT",
+        "quantity": "1",
+        "price": "72000",
+    }
+    assert client.orders.modified_order_id == "order-1"
+    assert client.orders.modified_request is not None
+    assert client.orders.modified_request.model_dump(by_alias=True, exclude_none=True) == {
+        "orderType": "LIMIT",
+        "quantity": "2",
+        "price": "71000",
+    }
+    assert client.orders.canceled_order_id == "order-1"
+
+
+def test_live_order_previews_validate_requests_without_submitting() -> None:
+    client = _FakeClient()
+    tools = TossInvestRemoteTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
+
+    created = tools.preview_create_order(
+        symbol="005930",
+        side="BUY",
+        order_type="LIMIT",
+        quantity="1",
+        price="72000",
+        account_seq="7",
+    )
+    modified = tools.preview_modify_order(
+        "order-1",
+        order_type="LIMIT",
+        quantity="2",
+        account_seq="7",
+    )
+    canceled = tools.preview_cancel_order("order-1", account_seq="7")
+
+    assert created == {
+        "symbol": "005930",
+        "side": "BUY",
+        "order_type": "LIMIT",
+        "quantity": "1",
+        "price": "72000",
+        "account_seq": "7",
+    }
+    assert modified == {
+        "order_type": "LIMIT",
+        "quantity": "2",
+        "account_seq": "7",
+        "order_id": "order-1",
+    }
+    assert canceled == {"order_id": "order-1", "account_seq": "7"}
+    assert client.orders.created_request is None
+    assert client.orders.modified_request is None
+    assert client.orders.canceled_order_id is None
 
 
 def test_tools_reuse_account_list_cache_for_account_resolution() -> None:

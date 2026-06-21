@@ -7,7 +7,17 @@ from dataclasses import dataclass
 from typing import cast
 
 from pydantic import BaseModel
-from tossinvest import Account, CandleInterval, CurrencyCode, OrderListStatus
+from tossinvest import (
+    Account,
+    CandleInterval,
+    CurrencyCode,
+    OrderCreateRequest,
+    OrderListStatus,
+    OrderModifyRequest,
+    OrderSide,
+    OrderTimeInForce,
+    OrderType,
+)
 
 from .accounts import find_account_by_number
 from .client_factory import ClientContextFactory
@@ -205,6 +215,127 @@ class TossInvestRemoteTools:
         with self.client_factory() as client:
             return _dump_model_list(client.orders.get_commissions(account=account))
 
+    def create_order(
+        self,
+        *,
+        symbol: str,
+        side: OrderSide,
+        order_type: OrderType,
+        quantity: str | None = None,
+        order_amount: str | None = None,
+        price: str | None = None,
+        time_in_force: OrderTimeInForce | None = None,
+        client_order_id: str | None = None,
+        confirm_high_value_order: bool | None = None,
+        account_seq: str | int | None = None,
+    ) -> dict[str, object]:
+        """Submit a live order request for the configured or overridden accountSeq."""
+        account = self._account_for_tool(account_seq)
+        request = _create_order_request(
+            symbol=symbol,
+            side=side,
+            order_type=order_type,
+            quantity=quantity,
+            order_amount=order_amount,
+            price=price,
+            time_in_force=time_in_force,
+            client_order_id=client_order_id,
+            confirm_high_value_order=confirm_high_value_order,
+        )
+        with self.client_factory() as client:
+            return _dump_model(client.orders.create_order(request, account=account))
+
+    def preview_create_order(
+        self,
+        *,
+        symbol: str,
+        side: OrderSide,
+        order_type: OrderType,
+        quantity: str | None = None,
+        order_amount: str | None = None,
+        price: str | None = None,
+        time_in_force: OrderTimeInForce | None = None,
+        client_order_id: str | None = None,
+        confirm_high_value_order: bool | None = None,
+        account_seq: str | int | None = None,
+    ) -> dict[str, object]:
+        """Return the validated live order summary without submitting it."""
+        account = self._account_for_tool(account_seq)
+        request = _create_order_request(
+            symbol=symbol,
+            side=side,
+            order_type=order_type,
+            quantity=quantity,
+            order_amount=order_amount,
+            price=price,
+            time_in_force=time_in_force,
+            client_order_id=client_order_id,
+            confirm_high_value_order=confirm_high_value_order,
+        )
+        return _live_order_summary(request, account=account)
+
+    def modify_order(
+        self,
+        order_id: str,
+        *,
+        order_type: OrderType,
+        quantity: str | None = None,
+        price: str | None = None,
+        confirm_high_value_order: bool | None = None,
+        account_seq: str | int | None = None,
+    ) -> dict[str, object]:
+        """Modify an existing live order by server order identifier and accountSeq."""
+        account = self._account_for_tool(account_seq)
+        request = _modify_order_request(
+            order_type=order_type,
+            quantity=quantity,
+            price=price,
+            confirm_high_value_order=confirm_high_value_order,
+        )
+        with self.client_factory() as client:
+            return _dump_model(client.orders.modify_order(order_id, request, account=account))
+
+    def preview_modify_order(
+        self,
+        order_id: str,
+        *,
+        order_type: OrderType,
+        quantity: str | None = None,
+        price: str | None = None,
+        confirm_high_value_order: bool | None = None,
+        account_seq: str | int | None = None,
+    ) -> dict[str, object]:
+        """Return the validated live order modification summary without submitting it."""
+        account = self._account_for_tool(account_seq)
+        request = _modify_order_request(
+            order_type=order_type,
+            quantity=quantity,
+            price=price,
+            confirm_high_value_order=confirm_high_value_order,
+        )
+        summary = _live_order_summary(request, account=account)
+        summary["order_id"] = order_id
+        return summary
+
+    def cancel_order(
+        self,
+        order_id: str,
+        account_seq: str | int | None = None,
+    ) -> dict[str, object]:
+        """Cancel an existing live order by server order identifier and accountSeq."""
+        account = self._account_for_tool(account_seq)
+        with self.client_factory() as client:
+            return _dump_model(client.orders.cancel_order(order_id, account=account))
+
+    def preview_cancel_order(
+        self,
+        order_id: str,
+        account_seq: str | int | None = None,
+    ) -> dict[str, object]:
+        """Return the live order cancellation summary without submitting it."""
+        account = self._account_for_tool(account_seq)
+        return {"order_id": order_id, "account_seq": account}
+
     def _account_for_tool(self, account_seq: str | int | None) -> str | int | None:
         if self.account_resolver is None:
             return account_seq
@@ -244,3 +375,53 @@ def _dump_value(value: object) -> object:
     if isinstance(value, dict):
         return {str(key): _dump_value(item) for key, item in value.items()}
     return value
+
+
+def _create_order_request(
+    *,
+    symbol: str,
+    side: OrderSide,
+    order_type: OrderType,
+    quantity: str | None = None,
+    order_amount: str | None = None,
+    price: str | None = None,
+    time_in_force: OrderTimeInForce | None = None,
+    client_order_id: str | None = None,
+    confirm_high_value_order: bool | None = None,
+) -> OrderCreateRequest:
+    return OrderCreateRequest.model_validate(
+        {
+            "clientOrderId": client_order_id,
+            "symbol": symbol,
+            "side": side,
+            "orderType": order_type,
+            "timeInForce": time_in_force,
+            "quantity": quantity,
+            "orderAmount": order_amount,
+            "price": price,
+            "confirmHighValueOrder": confirm_high_value_order,
+        }
+    )
+
+
+def _modify_order_request(
+    *,
+    order_type: OrderType,
+    quantity: str | None = None,
+    price: str | None = None,
+    confirm_high_value_order: bool | None = None,
+) -> OrderModifyRequest:
+    return OrderModifyRequest.model_validate(
+        {
+            "orderType": order_type,
+            "quantity": quantity,
+            "price": price,
+            "confirmHighValueOrder": confirm_high_value_order,
+        }
+    )
+
+
+def _live_order_summary(value: BaseModel, *, account: str | int | None) -> dict[str, object]:
+    summary = cast(dict[str, object], value.model_dump(exclude_none=True))
+    summary["account_seq"] = account
+    return summary

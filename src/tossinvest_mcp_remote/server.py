@@ -2,19 +2,29 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, cast
 
+from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.types import ToolAnnotations
 from pydantic import Field
-from tossinvest import CandleInterval, CurrencyCode, OrderListStatus
+from tossinvest import (
+    CandleInterval,
+    CurrencyCode,
+    OrderListStatus,
+    OrderSide,
+    OrderTimeInForce,
+    OrderType,
+)
 
 from .client_factory import ClientContextFactory
 from .config import TossInvestRemoteServerConfig
-from .errors import UnsupportedLiveOrderModeError
+from .confirmations import LiveOrderConfirmationStore, PendingLiveOrder
+from .errors import TossInvestMCPRemoteConfigError
 from .tools import TossInvestRemoteTools
 
 if TYPE_CHECKING:
-    from mcp.server.auth.provider import TokenVerifier
+    from mcp.server.auth.provider import AccessToken, TokenVerifier
     from mcp.server.auth.settings import AuthSettings
     from mcp.server.fastmcp import FastMCP
 
@@ -28,11 +38,24 @@ ACCOUNT_NO_DESCRIPTION = (
 )
 SERVER_INSTRUCTIONS = (
     "This server exposes read-only TossInvest account and market data tools by default. "
+    "Live order tools are registered only when explicitly enabled. "
     "It does not provide investment advice. Account-scoped tools use configured accountSeq "
     "unless account_seq is explicitly supplied. Avoid unnecessary account discovery because "
     "account APIs are rate-limited."
 )
 READ_ONLY_TOOL_ANNOTATIONS = ToolAnnotations(readOnlyHint=True)
+LIVE_ORDER_TOOL_ANNOTATIONS = ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=True,
+    idempotentHint=False,
+    openWorldHint=True,
+)
+PENDING_LIVE_ORDER_TOOL_ANNOTATIONS = ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=False,
+)
 
 
 def create_server(
@@ -42,13 +65,18 @@ def create_server(
     auth: AuthSettings | None = None,
     token_verifier: TokenVerifier | None = None,
 ) -> FastMCP:
-    """Create a read-only TossInvest MCP server."""
+    """Create a TossInvest MCP server."""
     from mcp.server.fastmcp import FastMCP
     from mcp.server.transport_security import TransportSecuritySettings
 
-    if config.enable_live_orders:
-        raise UnsupportedLiveOrderModeError(
-            "Live order tools are not implemented in milestone 1. The default server is read-only."
+    if (
+        config.enable_live_orders
+        and not config.allow_stdio_live_orders
+        and not config.live_order_required_scopes
+    ):
+        raise TossInvestMCPRemoteConfigError(
+            "Live order tools require at least one --live-order-required-scope "
+            "or --allow-stdio-live-orders."
         )
 
     tools = TossInvestRemoteTools(
@@ -56,6 +84,11 @@ def create_server(
         account_resolver=config.account_seq_for_tool,
         account_list_cache_getter=config.cached_account_list,
         account_list_observer=config.cache_account_list,
+    )
+    live_order_confirmations = (
+        LiveOrderConfirmationStore(ttl=config.live_order_confirmation_ttl)
+        if config.require_live_order_confirmation
+        else None
     )
     server = FastMCP(
         name="TossInvest MCP Remote",
@@ -71,6 +104,15 @@ def create_server(
     _register_market_data_tools(server, tools)
     _register_market_info_tools(server, tools)
     _register_account_scoped_tools(server, tools)
+    if config.enable_live_orders:
+        _register_live_order_tools(
+            server,
+            tools,
+            required_scopes=config.live_order_required_scopes,
+            allow_local_live_orders=config.allow_stdio_live_orders,
+            require_confirmation=config.require_live_order_confirmation,
+            confirmation_store=live_order_confirmations,
+        )
     return server
 
 
@@ -250,3 +292,316 @@ def _register_account_scoped_tools(server: FastMCP, tools: TossInvestRemoteTools
     ) -> list[dict[str, object]]:
         """Return commissions using the configured default accountSeq or an account_seq override."""
         return tools.get_commissions(account_seq=account_seq)
+
+
+def _register_live_order_tools(
+    server: FastMCP,
+    tools: TossInvestRemoteTools,
+    *,
+    required_scopes: Sequence[str],
+    allow_local_live_orders: bool,
+    require_confirmation: bool,
+    confirmation_store: LiveOrderConfirmationStore | None,
+) -> None:
+    """Register opt-in live order mutation tools."""
+    if require_confirmation:
+        _register_confirmed_live_order_tools(
+            server,
+            tools,
+            required_scopes=required_scopes,
+            allow_local_live_orders=allow_local_live_orders,
+            confirmation_store=_require_confirmation_store(confirmation_store),
+        )
+        return
+    _register_immediate_live_order_tools(
+        server,
+        tools,
+        required_scopes=required_scopes,
+        allow_local_live_orders=allow_local_live_orders,
+    )
+
+
+def _register_immediate_live_order_tools(
+    server: FastMCP,
+    tools: TossInvestRemoteTools,
+    *,
+    required_scopes: Sequence[str],
+    allow_local_live_orders: bool,
+) -> None:
+    """Register live order tools that execute immediately after authorization."""
+
+    @server.tool(annotations=LIVE_ORDER_TOOL_ANNOTATIONS)
+    def create_order(
+        symbol: str,
+        side: OrderSide,
+        order_type: OrderType,
+        *,
+        quantity: str | None = None,
+        order_amount: str | None = None,
+        price: str | None = None,
+        time_in_force: OrderTimeInForce | None = None,
+        client_order_id: str | None = None,
+        confirm_high_value_order: bool | None = None,
+        account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
+    ) -> dict[str, object]:
+        """Submit a live order using the configured default accountSeq or an override."""
+        _authorize_live_order(required_scopes, allow_local_live_orders=allow_local_live_orders)
+        return tools.create_order(
+            symbol=symbol,
+            side=side,
+            order_type=order_type,
+            quantity=quantity,
+            order_amount=order_amount,
+            price=price,
+            time_in_force=time_in_force,
+            client_order_id=client_order_id,
+            confirm_high_value_order=confirm_high_value_order,
+            account_seq=account_seq,
+        )
+
+    @server.tool(annotations=LIVE_ORDER_TOOL_ANNOTATIONS)
+    def modify_order(
+        order_id: str,
+        order_type: OrderType,
+        *,
+        quantity: str | None = None,
+        price: str | None = None,
+        confirm_high_value_order: bool | None = None,
+        account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
+    ) -> dict[str, object]:
+        """Modify a live order using the configured default accountSeq or an override."""
+        _authorize_live_order(required_scopes, allow_local_live_orders=allow_local_live_orders)
+        return tools.modify_order(
+            order_id,
+            order_type=order_type,
+            quantity=quantity,
+            price=price,
+            confirm_high_value_order=confirm_high_value_order,
+            account_seq=account_seq,
+        )
+
+    @server.tool(annotations=LIVE_ORDER_TOOL_ANNOTATIONS)
+    def cancel_order(
+        order_id: str,
+        account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
+    ) -> dict[str, object]:
+        """Cancel a live order using the configured default accountSeq or an override."""
+        _authorize_live_order(required_scopes, allow_local_live_orders=allow_local_live_orders)
+        return tools.cancel_order(order_id, account_seq=account_seq)
+
+
+def _register_confirmed_live_order_tools(
+    server: FastMCP,
+    tools: TossInvestRemoteTools,
+    *,
+    required_scopes: Sequence[str],
+    allow_local_live_orders: bool,
+    confirmation_store: LiveOrderConfirmationStore,
+) -> None:
+    """Register live order tools that require confirm_live_order execution."""
+
+    @server.tool(annotations=PENDING_LIVE_ORDER_TOOL_ANNOTATIONS)
+    def create_order(
+        symbol: str,
+        side: OrderSide,
+        order_type: OrderType,
+        *,
+        quantity: str | None = None,
+        order_amount: str | None = None,
+        price: str | None = None,
+        time_in_force: OrderTimeInForce | None = None,
+        client_order_id: str | None = None,
+        confirm_high_value_order: bool | None = None,
+        account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
+    ) -> dict[str, object]:
+        """Create a pending live order confirmation without submitting it."""
+        authorization_key = _authorize_live_order(
+            required_scopes,
+            allow_local_live_orders=allow_local_live_orders,
+        )
+        summary = tools.preview_create_order(
+            symbol=symbol,
+            side=side,
+            order_type=order_type,
+            quantity=quantity,
+            order_amount=order_amount,
+            price=price,
+            time_in_force=time_in_force,
+            client_order_id=client_order_id,
+            confirm_high_value_order=confirm_high_value_order,
+            account_seq=account_seq,
+        )
+        return confirmation_store.create(
+            action="create_order",
+            arguments={
+                "symbol": symbol,
+                "side": side,
+                "order_type": order_type,
+                "quantity": quantity,
+                "order_amount": order_amount,
+                "price": price,
+                "time_in_force": time_in_force,
+                "client_order_id": client_order_id,
+                "confirm_high_value_order": confirm_high_value_order,
+                "account_seq": summary["account_seq"],
+            },
+            summary=summary,
+            authorization_key=authorization_key,
+        )
+
+    @server.tool(annotations=PENDING_LIVE_ORDER_TOOL_ANNOTATIONS)
+    def modify_order(
+        order_id: str,
+        order_type: OrderType,
+        *,
+        quantity: str | None = None,
+        price: str | None = None,
+        confirm_high_value_order: bool | None = None,
+        account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
+    ) -> dict[str, object]:
+        """Create a pending live order modification confirmation."""
+        authorization_key = _authorize_live_order(
+            required_scopes,
+            allow_local_live_orders=allow_local_live_orders,
+        )
+        summary = tools.preview_modify_order(
+            order_id,
+            order_type=order_type,
+            quantity=quantity,
+            price=price,
+            confirm_high_value_order=confirm_high_value_order,
+            account_seq=account_seq,
+        )
+        return confirmation_store.create(
+            action="modify_order",
+            arguments={
+                "order_id": order_id,
+                "order_type": order_type,
+                "quantity": quantity,
+                "price": price,
+                "confirm_high_value_order": confirm_high_value_order,
+                "account_seq": summary["account_seq"],
+            },
+            summary=summary,
+            authorization_key=authorization_key,
+        )
+
+    @server.tool(annotations=PENDING_LIVE_ORDER_TOOL_ANNOTATIONS)
+    def cancel_order(
+        order_id: str,
+        account_seq: str | None = Field(default=None, description=ACCOUNT_SEQ_DESCRIPTION),
+    ) -> dict[str, object]:
+        """Create a pending live order cancellation confirmation."""
+        authorization_key = _authorize_live_order(
+            required_scopes,
+            allow_local_live_orders=allow_local_live_orders,
+        )
+        summary = tools.preview_cancel_order(order_id, account_seq=account_seq)
+        return confirmation_store.create(
+            action="cancel_order",
+            arguments={
+                "order_id": order_id,
+                "account_seq": summary["account_seq"],
+            },
+            summary=summary,
+            authorization_key=authorization_key,
+        )
+
+    @server.tool(annotations=LIVE_ORDER_TOOL_ANNOTATIONS)
+    def confirm_live_order(confirmation_id: str) -> dict[str, object]:
+        """Execute a pending live order confirmation by confirmationId."""
+        authorization_key = _authorize_live_order(
+            required_scopes,
+            allow_local_live_orders=allow_local_live_orders,
+        )
+        if confirmation_store is None:
+            msg = "Live order confirmation store is not configured."
+            raise RuntimeError(msg)
+        pending = confirmation_store.pop(
+            confirmation_id,
+            authorization_key=authorization_key,
+        )
+        return _execute_pending_live_order(tools, pending)
+
+
+def _require_confirmation_store(
+    confirmation_store: LiveOrderConfirmationStore | None,
+) -> LiveOrderConfirmationStore:
+    if confirmation_store is None:
+        msg = "Live order confirmation store is not configured."
+        raise RuntimeError(msg)
+    return confirmation_store
+
+
+def _authorize_live_order(
+    required_scopes: Sequence[str],
+    *,
+    allow_local_live_orders: bool,
+) -> str:
+    """Authorize one live order tool call."""
+    if allow_local_live_orders:
+        return "local-stdio"
+    access_token = _require_oauth_scopes(required_scopes)
+    return _access_token_authorization_key(access_token)
+
+
+def _require_oauth_scopes(required_scopes: Sequence[str]) -> AccessToken:
+    """Require the current OAuth access token to contain every configured scope."""
+    access_token = get_access_token()
+    if access_token is None:
+        msg = "Live order tools require an OAuth access token."
+        raise PermissionError(msg)
+    granted_scopes = set(access_token.scopes)
+    missing_scopes = [scope for scope in required_scopes if scope not in granted_scopes]
+    if missing_scopes:
+        msg = "Live order tools require OAuth scope(s): " + ", ".join(missing_scopes)
+        raise PermissionError(msg)
+    return access_token
+
+
+def _access_token_authorization_key(access_token: AccessToken) -> str:
+    subject = access_token.subject or ""
+    resource = access_token.resource or ""
+    return f"oauth:{access_token.client_id}:{subject}:{resource}"
+
+
+def _execute_pending_live_order(
+    tools: TossInvestRemoteTools,
+    pending: PendingLiveOrder,
+) -> dict[str, object]:
+    arguments = pending.arguments
+    if pending.action == "create_order":
+        return tools.create_order(
+            symbol=cast(str, arguments["symbol"]),
+            side=cast(OrderSide, arguments["side"]),
+            order_type=cast(OrderType, arguments["order_type"]),
+            quantity=cast(str | None, arguments.get("quantity")),
+            order_amount=cast(str | None, arguments.get("order_amount")),
+            price=cast(str | None, arguments.get("price")),
+            time_in_force=cast(OrderTimeInForce | None, arguments.get("time_in_force")),
+            client_order_id=cast(str | None, arguments.get("client_order_id")),
+            confirm_high_value_order=cast(
+                bool | None,
+                arguments.get("confirm_high_value_order"),
+            ),
+            account_seq=cast(str | int | None, arguments.get("account_seq")),
+        )
+    if pending.action == "modify_order":
+        return tools.modify_order(
+            cast(str, arguments["order_id"]),
+            order_type=cast(OrderType, arguments["order_type"]),
+            quantity=cast(str | None, arguments.get("quantity")),
+            price=cast(str | None, arguments.get("price")),
+            confirm_high_value_order=cast(
+                bool | None,
+                arguments.get("confirm_high_value_order"),
+            ),
+            account_seq=cast(str | int | None, arguments.get("account_seq")),
+        )
+    if pending.action == "cancel_order":
+        return tools.cancel_order(
+            cast(str, arguments["order_id"]),
+            account_seq=cast(str | int | None, arguments.get("account_seq")),
+        )
+    msg = f"Unsupported live order confirmation action: {pending.action}"
+    raise ValueError(msg)

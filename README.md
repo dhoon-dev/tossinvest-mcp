@@ -5,7 +5,7 @@ Remote MCP server for the unofficial TossInvest OpenAPI Python SDK.
 This project is not affiliated with, endorsed by, or maintained by Toss Securities.
 Verify all behavior against the official API documentation before using this server in
 production. The server exposes read-only tools by default. The server does not provide
-investment advice. Live order tools are not included in milestone 1.
+investment advice. Live order tools are available only through explicit opt-in.
 
 ## Purpose
 
@@ -54,6 +54,19 @@ uv run tossinvest-mcp-remote stdio
 ```
 
 STDIO mode writes MCP protocol messages to stdout only. Diagnostics go to stderr.
+
+Local Codex STDIO can register live order tools, but this is a local trust decision
+and does not perform OAuth scope checks:
+
+```bash
+uv run tossinvest-mcp-remote stdio \
+  --client-id-command "/usr/bin/security find-generic-password -s tossinvest-api-key -w" \
+  --client-secret-command "/usr/bin/security find-generic-password -s tossinvest-secret-key -w" \
+  --account "12345678901" \
+  --enable-live-orders \
+  --allow-stdio-live-orders \
+  --require-live-order-confirmation
+```
 
 ## HTTP
 
@@ -125,6 +138,16 @@ This server verifies OAuth access tokens on every `/mcp` request but does not is
 tokens itself. Keep using one server instance per TossInvest credential set unless you
 also add a separate per-user TossInvest credential mapping layer.
 
+If you enable live order tools on a public HTTP deployment, require a distinct
+tool-level OAuth scope with `--live-order-required-scope`. For example, the endpoint
+can require `tossinvest:read` globally while `create_order`, `modify_order`, and
+`cancel_order` require an additional `tossinvest:trade` scope.
+
+Use `--require-live-order-confirmation` when you want `create_order`, `modify_order`,
+and `cancel_order` to return a pending confirmation instead of submitting immediately.
+Only `confirm_live_order` executes the live order, so MCP clients can prompt only for
+that final tool.
+
 ## Accounts
 
 `--account` accepts the official account number (`accountNo`) and resolves it lazily
@@ -184,8 +207,37 @@ The default tool list is read-only:
 - account data: `get_holdings`, `list_orders`, `get_order`, `get_buying_power`,
   `get_sellable_quantity`, `get_commissions`
 
-Live order creation, modification, and cancellation are deliberately excluded from
-milestone 1. If added later, they must require explicit opt-in and separate warnings.
+Live order creation, modification, and cancellation are opt-in:
+
+- `create_order`
+- `modify_order`
+- `cancel_order`
+
+Enable them only for deployments that are allowed to place, modify, or cancel real
+orders. HTTP deployments require at least one configured live-order scope, and each
+tool call must include an OAuth access token containing every configured scope:
+
+```bash
+uv run tossinvest-mcp-remote serve-http \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --client-id-command "cat /run/secrets/tossinvest_client_id" \
+  --client-secret-command "cat /run/secrets/tossinvest_client_secret" \
+  --account "12345678901" \
+  --oauth-issuer-url "https://auth.example.com/realms/tossinvest" \
+  --oauth-resource-url "https://your-domain.example/mcp" \
+  --oauth-jwks-uri "https://auth.example.com/realms/tossinvest/protocol/openid-connect/certs" \
+  --oauth-required-scope "tossinvest:read" \
+  --live-order-required-scope "tossinvest:trade" \
+  --require-live-order-confirmation \
+  --enable-live-orders
+```
+
+For local Codex STDIO, use
+`--enable-live-orders --allow-stdio-live-orders --require-live-order-confirmation`
+instead. This bypasses OAuth because STDIO has no request token; rely on Codex tool
+approval for `confirm_live_order`, local account isolation, and credential-helper
+controls.
 
 ## Development
 

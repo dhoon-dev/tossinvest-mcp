@@ -44,6 +44,7 @@ and configure:
 - `--oauth-jwks-uri`
 - `--oauth-audience`
 - `--oauth-required-scope`
+- `--live-order-required-scope`
 - `--oauth-allowed-subject` or `--oauth-allowed-email`
 
 OAuth authenticates the MCP caller. It does not automatically create per-user
@@ -57,4 +58,19 @@ This server is a data access layer. It does not provide investment advice, rank
 securities, suggest trades, create portfolio allocations, or make buy/sell/hold
 recommendations.
 
-Live order tools are not included in milestone 1.
+Live order tools are disabled by default and are registered only with
+`--enable-live-orders`. HTTP deployments also require at least one configured
+`--live-order-required-scope`. The server checks those scopes at tool execution time
+for `create_order`, `modify_order`, and `cancel_order`, so one `/mcp` endpoint can
+serve read tools with a baseline scope such as `tossinvest:read` while live order
+tools require an additional scope such as `tossinvest:trade`.
+
+Local STDIO deployments can opt in with `--allow-stdio-live-orders`. That mode is for
+a trusted local Codex process only; it does not provide OAuth authorization because
+STDIO has no caller access token.
+
+`--require-live-order-confirmation` adds a server-side two-step flow for both STDIO
+and HTTP. The first tool call stores a short-lived pending confirmation and only
+`confirm_live_order` executes the order. Pending confirmations are in-memory,
+process-local, expire after the configured TTL, and are bound to the same local or
+OAuth caller that created them.

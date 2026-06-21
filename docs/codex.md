@@ -29,6 +29,40 @@ default_tools_approval_mode = "prompt"
 Codex passes `args` as literal process arguments. Do not rely on shell expansion inside
 the list.
 
+Local STDIO can expose live order tools for a trusted personal Codex setup:
+
+```toml
+[mcp_servers.tossinvest]
+command = "uvx"
+args = [
+  "--from",
+  "git+https://github.com/dhoon-dev/tossinvest-mcp-remote.git@main",
+  "tossinvest-mcp-remote",
+  "stdio",
+  "--client-id-command",
+  "/usr/bin/security find-generic-password -s tossinvest-api-key -w",
+  "--client-secret-command",
+  "/usr/bin/security find-generic-password -s tossinvest-secret-key -w",
+  "--account",
+  "12345678901",
+  "--enable-live-orders",
+  "--allow-stdio-live-orders",
+  "--require-live-order-confirmation",
+]
+startup_timeout_sec = 30
+tool_timeout_sec = 60
+default_tools_approval_mode = "approve"
+
+[mcp_servers.tossinvest.tools.confirm_live_order]
+approval_mode = "prompt"
+```
+
+`--allow-stdio-live-orders` is not OAuth authorization. It is a local opt-in for a
+trusted Codex process, so keep credentials isolated to the intended account.
+`--require-live-order-confirmation` makes `create_order`, `modify_order`, and
+`cancel_order` return pending confirmations. Only `confirm_live_order` submits the
+actual order, and the tool-specific approval setting prompts at that final step.
+
 ## Streamable HTTP
 
 Prefer direct `config.toml` registration for HTTP:

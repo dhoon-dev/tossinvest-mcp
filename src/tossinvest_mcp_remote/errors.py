@@ -17,7 +17,3 @@ class CredentialHelperError(TossInvestMCPRemoteConfigError):
 
 class AccountResolutionError(TossInvestMCPRemoteError):
     """Raised when an account number cannot be resolved to accountSeq."""
-
-
-class UnsupportedLiveOrderModeError(TossInvestMCPRemoteConfigError):
-    """Raised when live-order tools are requested before implementation."""
