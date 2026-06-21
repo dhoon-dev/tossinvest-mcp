@@ -75,3 +75,5 @@ during live tests.
 - Keep the title in English, concise, specific, and no longer than 50 characters.
 - Wrap body lines at 72 characters or fewer. Use the body to explain the
   reason, impact, or notable verification for the change.
+- Follow the repository rules enforced by `scripts/check_commit_messages.py`.
+- Never bypass the commit hook with `--no-verify`.
