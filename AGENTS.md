@@ -34,15 +34,18 @@ repository must be written in English unless a user explicitly asks for a transl
 
 ## Quality Gate
 
-Run the focused command for the change first. Before handing off broad changes, run:
+Run the focused command for the change first. Before handing off broad changes,
+run the full local gate:
 
 ```bash
 uv lock
-uv sync --locked --all-extras
-uv run ruff format --check .
-uv run ruff check .
-uv run ty check
-uv run pytest
+uv sync --locked --all-extras --group docs
+uv run --locked ruff format --check .
+uv run --locked ruff check .
+uv run --locked ty check
+uv run --locked pytest -m "not live"
+uv run --locked --group docs sphinx-build -W -b html docs docs/_build/html
+uv build
 ```
 
 ## Credentials and Security

@@ -21,6 +21,7 @@ git status --short --branch
 ```text
 pyproject.toml [project].version
 src/tossinvest_mcp_remote/_version.py __version__
+docs/conf.py release
 uv.lock package tossinvest-mcp-remote version
 ```
 
@@ -30,21 +31,22 @@ uv.lock package tossinvest-mcp-remote version
 uv lock
 ```
 
-5. Validate the version declarations by checking the package version surfaces:
+5. Validate the version declarations against the intended tag:
 
 ```bash
-uv run --locked tossinvest-mcp-remote version
-uv run --locked python -c "import tossinvest_mcp_remote; print(tossinvest_mcp_remote.__version__)"
+uv run --locked python scripts/validate_release_tag.py vX.Y.Z
 ```
 
 6. Run the project quality gate before handing off broad version bumps:
 
 ```bash
-uv sync --locked --all-extras
+uv sync --locked --all-extras --group docs
 uv run --locked ruff format --check .
 uv run --locked ruff check .
 uv run --locked ty check
-uv run --locked pytest
+uv run --locked pytest -m "not live"
+uv run --locked --group docs sphinx-build -W -b html docs docs/_build/html
+uv build
 ```
 
 7. Report the changed version, changed files, and validation commands.
@@ -57,6 +59,6 @@ Recommended message shape:
 ```text
 chore: bump version to X.Y.Z
 
-Update package, lockfile, and runtime version declarations for the
-X.Y.Z release.
+Update package, lockfile, runtime, and documentation version declarations
+for the X.Y.Z release.
 ```
