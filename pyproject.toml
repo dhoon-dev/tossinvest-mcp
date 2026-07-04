@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tossinvest-mcp-remote"
-version = "0.1.0"
+version = "0.1.1"
 description = "Remote MCP server for TossInvest OpenAPI"
 readme = "README.md"
 requires-python = ">=3.12"
