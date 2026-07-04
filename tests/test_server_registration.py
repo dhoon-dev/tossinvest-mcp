@@ -9,9 +9,9 @@ import tossinvest_mcp_remote.server as server_module
 from tossinvest_mcp_remote.config import TossInvestRemoteServerConfig
 from tossinvest_mcp_remote.errors import TossInvestMCPRemoteConfigError
 from tossinvest_mcp_remote.server import (
-    SERVER_INSTRUCTIONS,
     _authorize_live_order,
     _require_oauth_scopes,
+    _server_instructions,
     create_server,
 )
 from tossinvest_mcp_remote.server_http import _merged_scopes
@@ -298,8 +298,38 @@ def test_scope_metadata_merging_preserves_order_and_removes_duplicates() -> None
     ) == ["tossinvest:read", "profile", "tossinvest:trade"]
 
 
-def test_server_instructions_are_self_contained() -> None:
-    assert len(SERVER_INSTRUCTIONS) <= 512
-    assert "read-only" in SERVER_INSTRUCTIONS
-    assert "investment advice" in SERVER_INSTRUCTIONS
-    assert "accountSeq" in SERVER_INSTRUCTIONS
+def test_server_instructions_describe_read_only_mode() -> None:
+    pytest.importorskip("mcp.server.fastmcp")
+
+    config = TossInvestRemoteServerConfig("client-id", "client-secret")
+    server = create_server(config)
+    instructions = _server_instructions(config)
+
+    assert server.instructions == instructions
+    assert len(instructions) <= 512
+    assert "metadata" in instructions
+    assert "discover accounts" in instructions
+    assert "market data" in instructions
+    assert "account-scoped information" in instructions
+    assert "live orders" not in instructions
+
+
+def test_server_instructions_describe_live_order_mode() -> None:
+    pytest.importorskip("mcp.server.fastmcp")
+
+    config = TossInvestRemoteServerConfig(
+        "client-id",
+        "client-secret",
+        enable_live_orders=True,
+        live_order_required_scopes=("tossinvest:trade",),
+    )
+    server = create_server(config)
+    instructions = _server_instructions(config)
+
+    assert server.instructions == instructions
+    assert len(instructions) <= 512
+    assert "metadata" in instructions
+    assert "discover accounts" in instructions
+    assert "market data" in instructions
+    assert "account-scoped information" in instructions
+    assert "place, modify, or cancel live orders" in instructions

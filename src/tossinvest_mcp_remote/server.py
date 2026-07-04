@@ -35,13 +35,14 @@ ACCOUNT_NO_DESCRIPTION = (
     "Official accountNo from list_accounts. Resolving accountNo calls the ACCOUNT-rate-limited "
     "accounts endpoint."
 )
-SERVER_INSTRUCTIONS = (
-    "This server exposes read-only TossInvest OpenAPI metadata, account, and market data tools "
-    "by default. "
-    "Live order tools are registered only when explicitly enabled. "
-    "It does not provide investment advice. Account-scoped tools use configured accountSeq "
-    "unless account_seq is explicitly supplied. Avoid unnecessary account discovery because "
-    "account APIs are rate-limited."
+READ_ONLY_SERVER_INSTRUCTIONS = (
+    "Use this TossInvest OpenAPI MCP server to read API metadata, discover accounts, inspect "
+    "stocks, retrieve market data and market information, and view account-scoped information."
+)
+LIVE_ORDER_SERVER_INSTRUCTIONS = (
+    "Use this TossInvest OpenAPI MCP server to read API metadata, discover accounts, inspect "
+    "stocks, retrieve market data and market information, view account-scoped information, "
+    "and place, modify, or cancel live orders."
 )
 READ_ONLY_TOOL_ANNOTATIONS = ToolAnnotations(readOnlyHint=True)
 LIVE_ORDER_TOOL_ANNOTATIONS = ToolAnnotations(
@@ -81,7 +82,7 @@ def create_server(
     )
     server = FastMCP(
         name="TossInvest MCP Remote",
-        instructions=SERVER_INSTRUCTIONS,
+        instructions=_server_instructions(config),
         stateless_http=True,
         auth=auth,
         token_verifier=token_verifier,
@@ -102,6 +103,13 @@ def create_server(
             allow_local_live_orders=config.allow_stdio_live_orders,
         )
     return server
+
+
+def _server_instructions(config: TossInvestRemoteServerConfig) -> str:
+    """Return server instructions that match the registered tool surface."""
+    if config.enable_live_orders:
+        return LIVE_ORDER_SERVER_INSTRUCTIONS
+    return READ_ONLY_SERVER_INSTRUCTIONS
 
 
 def _register_openapi_tools(server: FastMCP, tools: TossInvestRemoteTools) -> None:
