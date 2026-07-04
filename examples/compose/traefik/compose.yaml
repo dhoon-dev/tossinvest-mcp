@@ -2,7 +2,7 @@ name: tossinvest-mcp-traefik
 
 services:
   tossinvest-mcp:
-    image: ${TOSSINVEST_MCP_IMAGE:-tossinvest-mcp-remote:latest}
+    image: ${TOSSINVEST_MCP_IMAGE:-tossinvest-mcp:latest}
     build:
       context: ${TOSSINVEST_MCP_BUILD_CONTEXT:-../../..}
       dockerfile_inline: |
@@ -26,7 +26,7 @@ services:
         ENV PATH="/app/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         EXPOSE 8000
 
-        ENTRYPOINT ["tossinvest-mcp-remote"]
+        ENTRYPOINT ["tossinvest-mcp"]
     restart: unless-stopped
     networks:
       - proxy

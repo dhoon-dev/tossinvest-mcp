@@ -36,7 +36,7 @@ does not host login, consent, authorization, token, registration, or revocation
 endpoints. Configure your authorization server separately, then run:
 
 ```bash
-uv run tossinvest-mcp-remote serve-http \
+uv run tossinvest-mcp serve-http \
   --host 0.0.0.0 \
   --port 8000 \
   --oauth-issuer-url "https://auth.example.com/realms/tossinvest" \

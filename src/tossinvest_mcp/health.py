@@ -13,7 +13,7 @@ async def healthz(_request: Request) -> JSONResponse:
     return JSONResponse(
         {
             "status": "healthy",
-            "service": "tossinvest-mcp-remote",
+            "service": "tossinvest-mcp",
             "version": __version__,
         }
     )

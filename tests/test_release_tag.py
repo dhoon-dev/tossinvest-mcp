@@ -24,8 +24,8 @@ def test_release_version_declarations_match() -> None:
 
     assert set(versions) == {
         "pyproject.toml [project.version]",
-        "uv.lock package tossinvest-mcp-remote",
-        "src/tossinvest_mcp_remote/_version.py __version__",
+        "uv.lock package tossinvest-mcp",
+        "src/tossinvest_mcp/_version.py __version__",
         "docs/conf.py release",
     }
     assert len(set(versions.values())) == 1

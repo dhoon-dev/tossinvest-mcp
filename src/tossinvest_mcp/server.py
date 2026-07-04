@@ -18,9 +18,9 @@ from tossinvest import (
 )
 
 from .client_factory import ClientContextFactory
-from .config import TossInvestRemoteServerConfig
-from .errors import TossInvestMCPRemoteConfigError
-from .tools import TossInvestRemoteTools
+from .config import TossInvestMCPServerConfig
+from .errors import TossInvestMCPConfigError
+from .tools import TossInvestMCPTools
 
 if TYPE_CHECKING:
     from mcp.server.auth.provider import AccessToken, TokenVerifier
@@ -54,7 +54,7 @@ LIVE_ORDER_TOOL_ANNOTATIONS = ToolAnnotations(
 
 
 def create_server(
-    config: TossInvestRemoteServerConfig,
+    config: TossInvestMCPServerConfig,
     *,
     client_factory: ClientContextFactory | None = None,
     auth: AuthSettings | None = None,
@@ -69,19 +69,19 @@ def create_server(
         and not config.allow_stdio_live_orders
         and not config.live_order_required_scopes
     ):
-        raise TossInvestMCPRemoteConfigError(
+        raise TossInvestMCPConfigError(
             "Live order tools require at least one --live-order-required-scope "
             "or --allow-stdio-live-orders."
         )
 
-    tools = TossInvestRemoteTools(
+    tools = TossInvestMCPTools(
         client_factory or config.create_client,
         account_resolver=config.account_seq_for_tool,
         account_list_cache_getter=config.cached_account_list,
         account_list_observer=config.cache_account_list,
     )
     server = FastMCP(
-        name="TossInvest MCP Remote",
+        name="TossInvest MCP",
         instructions=_server_instructions(config),
         stateless_http=True,
         auth=auth,
@@ -105,14 +105,14 @@ def create_server(
     return server
 
 
-def _server_instructions(config: TossInvestRemoteServerConfig) -> str:
+def _server_instructions(config: TossInvestMCPServerConfig) -> str:
     """Return server instructions that match the registered tool surface."""
     if config.enable_live_orders:
         return LIVE_ORDER_SERVER_INSTRUCTIONS
     return READ_ONLY_SERVER_INSTRUCTIONS
 
 
-def _register_openapi_tools(server: FastMCP, tools: TossInvestRemoteTools) -> None:
+def _register_openapi_tools(server: FastMCP, tools: TossInvestMCPTools) -> None:
     """Register official OpenAPI version metadata tools."""
     read_only_annotations = READ_ONLY_TOOL_ANNOTATIONS
 
@@ -130,7 +130,7 @@ def _register_openapi_tools(server: FastMCP, tools: TossInvestRemoteTools) -> No
         return tools.get_latest_openapi_version()
 
 
-def _register_account_tools(server: FastMCP, tools: TossInvestRemoteTools) -> None:
+def _register_account_tools(server: FastMCP, tools: TossInvestMCPTools) -> None:
     """Register account lookup tools."""
     read_only_annotations = READ_ONLY_TOOL_ANNOTATIONS
 
@@ -154,7 +154,7 @@ def _register_account_tools(server: FastMCP, tools: TossInvestRemoteTools) -> No
         return tools.find_account_by_number(account_no)
 
 
-def _register_stock_tools(server: FastMCP, tools: TossInvestRemoteTools) -> None:
+def _register_stock_tools(server: FastMCP, tools: TossInvestMCPTools) -> None:
     """Register stock information tools."""
     read_only_annotations = READ_ONLY_TOOL_ANNOTATIONS
 
@@ -184,7 +184,7 @@ def _register_stock_tools(server: FastMCP, tools: TossInvestRemoteTools) -> None
         return tools.get_stock_warnings(symbol)
 
 
-def _register_market_data_tools(server: FastMCP, tools: TossInvestRemoteTools) -> None:
+def _register_market_data_tools(server: FastMCP, tools: TossInvestMCPTools) -> None:
     """Register market data tools."""
     read_only_annotations = READ_ONLY_TOOL_ANNOTATIONS
 
@@ -256,7 +256,7 @@ def _register_market_data_tools(server: FastMCP, tools: TossInvestRemoteTools) -
         )
 
 
-def _register_market_info_tools(server: FastMCP, tools: TossInvestRemoteTools) -> None:
+def _register_market_info_tools(server: FastMCP, tools: TossInvestMCPTools) -> None:
     """Register market information tools."""
     read_only_annotations = READ_ONLY_TOOL_ANNOTATIONS
 
@@ -293,7 +293,7 @@ def _register_market_info_tools(server: FastMCP, tools: TossInvestRemoteTools) -
         return tools.get_us_market_calendar(date=date)
 
 
-def _register_account_scoped_tools(server: FastMCP, tools: TossInvestRemoteTools) -> None:
+def _register_account_scoped_tools(server: FastMCP, tools: TossInvestMCPTools) -> None:
     """Register read-only account-scoped tools."""
     read_only_annotations = READ_ONLY_TOOL_ANNOTATIONS
 
@@ -379,7 +379,7 @@ def _register_account_scoped_tools(server: FastMCP, tools: TossInvestRemoteTools
 
 def _register_live_order_tools(
     server: FastMCP,
-    tools: TossInvestRemoteTools,
+    tools: TossInvestMCPTools,
     *,
     required_scopes: Sequence[str],
     allow_local_live_orders: bool,

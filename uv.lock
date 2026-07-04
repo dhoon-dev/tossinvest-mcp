@@ -1000,8 +1000,8 @@ wheels = [
 ]
 
 [[package]]
-name = "tossinvest-mcp-remote"
-version = "0.1.2"
+name = "tossinvest-mcp"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

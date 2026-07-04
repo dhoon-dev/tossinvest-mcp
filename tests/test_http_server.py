@@ -14,14 +14,14 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from tossinvest_mcp_remote.config import TossInvestRemoteServerConfig
-from tossinvest_mcp_remote.errors import TossInvestMCPRemoteConfigError
-from tossinvest_mcp_remote.oauth import (
+from tossinvest_mcp.config import TossInvestMCPServerConfig
+from tossinvest_mcp.errors import TossInvestMCPConfigError
+from tossinvest_mcp.oauth import (
     JWTBearerTokenVerifier,
     OAuthResourceServerConfig,
     create_mcp_resource_server_auth,
 )
-from tossinvest_mcp_remote.server_http import (
+from tossinvest_mcp.server_http import (
     HTTPServerConfig,
     TrustedForwardedHeadersMiddleware,
     create_http_app,
@@ -37,7 +37,7 @@ KEY_ID = "test-key"
 
 async def test_http_bearer_token_protects_mcp_route() -> None:
     app = create_http_app(
-        TossInvestRemoteServerConfig("client-id", "client-secret"),
+        TossInvestMCPServerConfig("client-id", "client-secret"),
         HTTPServerConfig(bearer_token="secret"),
     )
 
@@ -53,7 +53,7 @@ async def test_http_bearer_token_protects_mcp_route() -> None:
 
 async def test_http_bearer_token_does_not_protect_healthz() -> None:
     app = create_http_app(
-        TossInvestRemoteServerConfig("client-id", "client-secret"),
+        TossInvestMCPServerConfig("client-id", "client-secret"),
         HTTPServerConfig(bearer_token="secret"),
     )
 
@@ -65,7 +65,7 @@ async def test_http_bearer_token_does_not_protect_healthz() -> None:
 
 async def test_mcp_route_reaches_fastmcp_app_when_unprotected() -> None:
     app = create_http_app(
-        TossInvestRemoteServerConfig("client-id", "client-secret"),
+        TossInvestMCPServerConfig("client-id", "client-secret"),
         HTTPServerConfig(),
     )
 
@@ -81,7 +81,7 @@ async def test_mcp_route_reaches_fastmcp_app_when_unprotected() -> None:
 
 async def test_oauth_protected_resource_metadata_is_exposed() -> None:
     app = create_http_app(
-        TossInvestRemoteServerConfig("client-id", "client-secret"),
+        TossInvestMCPServerConfig("client-id", "client-secret"),
         HTTPServerConfig(
             oauth=OAuthResourceServerConfig(
                 issuer_url=ISSUER_URL,
@@ -106,7 +106,7 @@ async def test_oauth_protected_resource_metadata_is_exposed() -> None:
 
 async def test_oauth_metadata_includes_live_order_scopes_when_enabled() -> None:
     app = create_http_app(
-        TossInvestRemoteServerConfig(
+        TossInvestMCPServerConfig(
             "client-id",
             "client-secret",
             enable_live_orders=True,
@@ -130,9 +130,9 @@ async def test_oauth_metadata_includes_live_order_scopes_when_enabled() -> None:
 
 
 def test_http_rejects_stdio_live_order_authorization() -> None:
-    with pytest.raises(TossInvestMCPRemoteConfigError, match="STDIO"):
+    with pytest.raises(TossInvestMCPConfigError, match="STDIO"):
         create_http_app(
-            TossInvestRemoteServerConfig(
+            TossInvestMCPServerConfig(
                 "client-id",
                 "client-secret",
                 enable_live_orders=True,
@@ -158,7 +158,7 @@ def test_create_mcp_resource_server_auth_returns_fastmcp_inputs() -> None:
 
 async def test_oauth_protects_mcp_route() -> None:
     app = create_http_app(
-        TossInvestRemoteServerConfig("client-id", "client-secret"),
+        TossInvestMCPServerConfig("client-id", "client-secret"),
         HTTPServerConfig(
             oauth=OAuthResourceServerConfig(
                 issuer_url=ISSUER_URL,
@@ -188,7 +188,7 @@ async def test_oauth_rejects_insufficient_scope(httpx_mock: HTTPXMock) -> None:
     private_key = _rsa_private_key()
     httpx_mock.add_response(method="GET", url=JWKS_URI, json=_jwks(private_key))
     app = create_http_app(
-        TossInvestRemoteServerConfig("client-id", "client-secret"),
+        TossInvestMCPServerConfig("client-id", "client-secret"),
         HTTPServerConfig(
             oauth=OAuthResourceServerConfig(
                 issuer_url=ISSUER_URL,
@@ -290,7 +290,7 @@ async def test_jwt_bearer_token_verifier_uses_provided_http_client() -> None:
 
 async def test_origin_validation_rejects_untrusted_origin() -> None:
     app = create_http_app(
-        TossInvestRemoteServerConfig("client-id", "client-secret"),
+        TossInvestMCPServerConfig("client-id", "client-secret"),
         HTTPServerConfig(allowed_origins=("https://trusted.example",)),
     )
 

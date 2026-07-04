@@ -5,16 +5,16 @@ from typing import cast
 import pytest
 from mcp.server.auth.provider import AccessToken
 
-import tossinvest_mcp_remote.server as server_module
-from tossinvest_mcp_remote.config import TossInvestRemoteServerConfig
-from tossinvest_mcp_remote.errors import TossInvestMCPRemoteConfigError
-from tossinvest_mcp_remote.server import (
+import tossinvest_mcp.server as server_module
+from tossinvest_mcp.config import TossInvestMCPServerConfig
+from tossinvest_mcp.errors import TossInvestMCPConfigError
+from tossinvest_mcp.server import (
     _authorize_live_order,
     _require_oauth_scopes,
     _server_instructions,
     create_server,
 )
-from tossinvest_mcp_remote.server_http import _merged_scopes
+from tossinvest_mcp.server_http import _merged_scopes
 
 
 def _property_enum(schema: dict[str, object], property_name: str) -> list[str]:
@@ -48,7 +48,7 @@ def _schema_enum(schema: dict[str, object], property_schema: dict[str, object]) 
 async def test_create_server_registers_read_only_tools_only() -> None:
     pytest.importorskip("mcp.server.fastmcp")
 
-    server = create_server(TossInvestRemoteServerConfig("client-id", "client-secret"))
+    server = create_server(TossInvestMCPServerConfig("client-id", "client-secret"))
     tool_names = {tool.name for tool in await server.list_tools()}
 
     assert "get_supported_openapi_version" in tool_names
@@ -63,7 +63,7 @@ async def test_create_server_registers_read_only_tools_only() -> None:
 async def test_account_scoped_tool_schema_uses_account_seq() -> None:
     pytest.importorskip("mcp.server.fastmcp")
 
-    server = create_server(TossInvestRemoteServerConfig("client-id", "client-secret"))
+    server = create_server(TossInvestMCPServerConfig("client-id", "client-secret"))
     tools = {tool.name: tool for tool in await server.list_tools()}
     schema = tools["get_buying_power"].inputSchema
 
@@ -76,7 +76,7 @@ async def test_account_scoped_tool_schema_uses_account_seq() -> None:
 async def test_read_only_tool_schemas_expose_sdk_enums() -> None:
     pytest.importorskip("mcp.server.fastmcp")
 
-    server = create_server(TossInvestRemoteServerConfig("client-id", "client-secret"))
+    server = create_server(TossInvestMCPServerConfig("client-id", "client-secret"))
     tools = {tool.name: tool for tool in await server.list_tools()}
 
     list_orders_schema = tools["list_orders"].inputSchema
@@ -98,7 +98,7 @@ async def test_read_only_tool_schemas_expose_sdk_enums() -> None:
 async def test_openapi_version_tool_schemas_are_argument_free() -> None:
     pytest.importorskip("mcp.server.fastmcp")
 
-    server = create_server(TossInvestRemoteServerConfig("client-id", "client-secret"))
+    server = create_server(TossInvestMCPServerConfig("client-id", "client-secret"))
     tools = {tool.name: tool for tool in await server.list_tools()}
 
     for tool_name in ("get_supported_openapi_version", "get_latest_openapi_version"):
@@ -114,7 +114,7 @@ async def test_mcp_tool_descriptions_expose_rate_limit_groups() -> None:
     pytest.importorskip("mcp.server.fastmcp")
 
     server = create_server(
-        TossInvestRemoteServerConfig(
+        TossInvestMCPServerConfig(
             "client-id",
             "client-secret",
             enable_live_orders=True,
@@ -159,9 +159,9 @@ async def test_mcp_tool_descriptions_expose_rate_limit_groups() -> None:
 async def test_live_order_tools_require_explicit_opt_in() -> None:
     pytest.importorskip("mcp.server.fastmcp")
 
-    default_server = create_server(TossInvestRemoteServerConfig("client-id", "client-secret"))
+    default_server = create_server(TossInvestMCPServerConfig("client-id", "client-secret"))
     live_server = create_server(
-        TossInvestRemoteServerConfig(
+        TossInvestMCPServerConfig(
             "client-id",
             "client-secret",
             enable_live_orders=True,
@@ -184,7 +184,7 @@ async def test_live_order_tools_allow_stdio_opt_in_without_oauth_scope() -> None
     pytest.importorskip("mcp.server.fastmcp")
 
     server = create_server(
-        TossInvestRemoteServerConfig(
+        TossInvestMCPServerConfig(
             "client-id",
             "client-secret",
             enable_live_orders=True,
@@ -201,7 +201,7 @@ async def test_live_order_tools_do_not_register_confirm_tool() -> None:
     pytest.importorskip("mcp.server.fastmcp")
 
     server = create_server(
-        TossInvestRemoteServerConfig(
+        TossInvestMCPServerConfig(
             "client-id",
             "client-secret",
             enable_live_orders=True,
@@ -219,7 +219,7 @@ async def test_live_order_tool_schemas_expose_sdk_enums() -> None:
     pytest.importorskip("mcp.server.fastmcp")
 
     server = create_server(
-        TossInvestRemoteServerConfig(
+        TossInvestMCPServerConfig(
             "client-id",
             "client-secret",
             enable_live_orders=True,
@@ -239,7 +239,7 @@ async def test_live_order_tool_call_requires_oauth_scope() -> None:
     pytest.importorskip("mcp.server.fastmcp")
 
     server = create_server(
-        TossInvestRemoteServerConfig(
+        TossInvestMCPServerConfig(
             "client-id",
             "client-secret",
             enable_live_orders=True,
@@ -281,9 +281,9 @@ def test_live_order_scope_check_accepts_configured_scope(
 def test_live_order_tools_require_configured_scope() -> None:
     pytest.importorskip("mcp.server.fastmcp")
 
-    with pytest.raises(TossInvestMCPRemoteConfigError, match="live-order-required-scope"):
+    with pytest.raises(TossInvestMCPConfigError, match="live-order-required-scope"):
         create_server(
-            TossInvestRemoteServerConfig(
+            TossInvestMCPServerConfig(
                 "client-id",
                 "client-secret",
                 enable_live_orders=True,
@@ -301,7 +301,7 @@ def test_scope_metadata_merging_preserves_order_and_removes_duplicates() -> None
 def test_server_instructions_describe_read_only_mode() -> None:
     pytest.importorskip("mcp.server.fastmcp")
 
-    config = TossInvestRemoteServerConfig("client-id", "client-secret")
+    config = TossInvestMCPServerConfig("client-id", "client-secret")
     server = create_server(config)
     instructions = _server_instructions(config)
 
@@ -313,7 +313,7 @@ def test_server_instructions_describe_read_only_mode() -> None:
 def test_server_instructions_describe_live_order_mode() -> None:
     pytest.importorskip("mcp.server.fastmcp")
 
-    config = TossInvestRemoteServerConfig(
+    config = TossInvestMCPServerConfig(
         "client-id",
         "client-secret",
         enable_live_orders=True,

@@ -1,1 +1,1 @@
-"""Tests for tossinvest-mcp-remote."""
+"""Tests for tossinvest-mcp."""

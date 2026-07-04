@@ -1,4 +1,4 @@
-"""Command-line interface for the TossInvest MCP remote server."""
+"""Command-line interface for the TossInvest MCP server."""
 
 from __future__ import annotations
 
@@ -14,14 +14,14 @@ from tossinvest import __version__ as tossinvest_sdk_version
 from ._version import __version__
 from .config import (
     DEFAULT_ACCOUNT_CACHE_TTL,
-    TossInvestRemoteServerConfig,
+    TossInvestMCPServerConfig,
 )
 from .credentials import (
     DEFAULT_CREDENTIAL_HELPER_TIMEOUT,
     resolve_credential,
     resolve_optional_secret,
 )
-from .errors import CredentialHelperError, TossInvestMCPRemoteConfigError
+from .errors import CredentialHelperError, TossInvestMCPConfigError
 from .logging import configure_logging
 from .oauth import DEFAULT_OAUTH_ALGORITHMS, OAuthResourceServerConfig
 from .server_http import HTTPServerConfig, run_http
@@ -30,7 +30,7 @@ from .server_stdio import run_stdio
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description="Run the TossInvest MCP remote server.")
+    parser = argparse.ArgumentParser(description="Run the TossInvest MCP server.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     stdio_parser = subparsers.add_parser("stdio", help="Run MCP over STDIO.")
@@ -78,7 +78,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def config_from_args(args: argparse.Namespace) -> TossInvestRemoteServerConfig:
+def config_from_args(args: argparse.Namespace) -> TossInvestMCPServerConfig:
     """Build server configuration from parsed arguments and environment."""
     client_id = resolve_credential(
         args.client_id,
@@ -97,11 +97,11 @@ def config_from_args(args: argparse.Namespace) -> TossInvestRemoteServerConfig:
     account_seq = args.account_seq or os.getenv("TOSSINVEST_ACCOUNT_SEQ")
     account_number = args.account_number or os.getenv("TOSSINVEST_ACCOUNT_NO")
     if account_seq and account_number:
-        raise TossInvestMCPRemoteConfigError(
+        raise TossInvestMCPConfigError(
             "Use either accountSeq or accountNo, not both. "
             "Unset TOSSINVEST_ACCOUNT_SEQ or TOSSINVEST_ACCOUNT_NO if needed."
         )
-    return TossInvestRemoteServerConfig(
+    return TossInvestMCPServerConfig(
         client_id=client_id,
         client_secret=client_secret,
         account=account_seq,
@@ -129,7 +129,7 @@ def http_config_from_args(args: argparse.Namespace) -> HTTPServerConfig:
     )
     oauth = _oauth_config_from_args(args)
     if bearer_token and oauth is not None:
-        raise TossInvestMCPRemoteConfigError(
+        raise TossInvestMCPConfigError(
             "Use either static HTTP bearer-token authentication or OAuth, not both. "
             "Unset TOSSINVEST_MCP_BEARER_TOKEN if needed."
         )
@@ -160,7 +160,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         if args.command == "serve-http":
             run_http(config, http_config_from_args(args))
             return
-    except (CredentialHelperError, TossInvestMCPRemoteConfigError) as exc:
+    except (CredentialHelperError, TossInvestMCPConfigError) as exc:
         raise SystemExit(str(exc)) from exc
 
     raise SystemExit(f"Unsupported command: {args.command}")
@@ -220,7 +220,7 @@ def _add_common_server_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--user-agent",
-        default="tossinvest-openapi tossinvest-mcp-remote/0.1.0",
+        default="tossinvest-openapi tossinvest-mcp/0.2.0",
         help="User-Agent header for TossInvest API requests.",
     )
     parser.add_argument(
@@ -331,7 +331,7 @@ def _oauth_config_from_args(args: argparse.Namespace) -> OAuthResourceServerConf
         return None
     missing = [label for label, value in oauth_fields.items() if not value]
     if missing:
-        raise TossInvestMCPRemoteConfigError(
+        raise TossInvestMCPConfigError(
             "OAuth configuration is incomplete. Missing: " + ", ".join(missing) + "."
         )
     oauth = OAuthResourceServerConfig(
@@ -350,9 +350,7 @@ def _oauth_config_from_args(args: argparse.Namespace) -> OAuthResourceServerConf
         oauth.auth_settings()
         AnyHttpUrl(oauth.jwks_uri)
     except ValueError as exc:
-        raise TossInvestMCPRemoteConfigError(
-            "OAuth configuration contains an invalid URL."
-        ) from exc
+        raise TossInvestMCPConfigError("OAuth configuration contains an invalid URL.") from exc
     return oauth
 
 
@@ -368,8 +366,8 @@ def _env_flag(value: str | None) -> bool:
 
 def _print_version() -> None:
     try:
-        package_version = version("tossinvest-mcp-remote")
+        package_version = version("tossinvest-mcp")
     except PackageNotFoundError:
         package_version = __version__
-    sys.stdout.write(f"tossinvest-mcp-remote {package_version}\n")
+    sys.stdout.write(f"tossinvest-mcp {package_version}\n")
     sys.stdout.write(f"tossinvest-openapi {tossinvest_sdk_version}\n")

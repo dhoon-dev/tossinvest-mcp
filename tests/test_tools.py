@@ -17,9 +17,9 @@ from tossinvest import (
     PriceResponse,
 )
 
-from tossinvest_mcp_remote.client_factory import ClientContextFactory
-from tossinvest_mcp_remote.config import TossInvestRemoteServerConfig
-from tossinvest_mcp_remote.tools import TossInvestRemoteTools
+from tossinvest_mcp.client_factory import ClientContextFactory
+from tossinvest_mcp.config import TossInvestMCPServerConfig
+from tossinvest_mcp.tools import TossInvestMCPTools
 
 
 class _Accounts:
@@ -183,7 +183,7 @@ class _FakeClientContext(AbstractContextManager[_FakeClient]):
 
 def test_tools_dump_sdk_models_with_official_aliases() -> None:
     client = _FakeClient()
-    tools = TossInvestRemoteTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
+    tools = TossInvestMCPTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
 
     account_result = tools.list_accounts()
     matched_account = tools.find_account_by_number("12345678901")
@@ -205,7 +205,7 @@ def test_tools_dump_sdk_models_with_official_aliases() -> None:
 
 def test_market_data_tool_does_not_discover_accounts() -> None:
     client = _FakeClient()
-    tools = TossInvestRemoteTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
+    tools = TossInvestMCPTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
 
     assert tools.get_price("005930")["lastPrice"] == "72000"
 
@@ -214,7 +214,7 @@ def test_market_data_tool_does_not_discover_accounts() -> None:
 
 def test_openapi_version_tools_call_sdk_client() -> None:
     client = _FakeClient()
-    tools = TossInvestRemoteTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
+    tools = TossInvestMCPTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
 
     assert tools.get_supported_openapi_version() == "1.1.5"
     assert tools.get_latest_openapi_version() == "1.1.5"
@@ -222,7 +222,7 @@ def test_openapi_version_tools_call_sdk_client() -> None:
 
 def test_account_scoped_tools_forward_account_override() -> None:
     client = _FakeClient()
-    tools = TossInvestRemoteTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
+    tools = TossInvestMCPTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
 
     result = tools.get_buying_power(currency="KRW", account_seq="7")
 
@@ -232,7 +232,7 @@ def test_account_scoped_tools_forward_account_override() -> None:
 
 def test_list_orders_defaults_to_open_status() -> None:
     client = _FakeClient()
-    tools = TossInvestRemoteTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
+    tools = TossInvestMCPTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
 
     result = tools.list_orders(account_seq="7")
 
@@ -243,7 +243,7 @@ def test_list_orders_defaults_to_open_status() -> None:
 
 def test_live_order_tools_build_sdk_requests_and_forward_account() -> None:
     client = _FakeClient()
-    tools = TossInvestRemoteTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
+    tools = TossInvestMCPTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
 
     created = tools.create_order(
         symbol="005930",
@@ -288,12 +288,12 @@ def test_live_order_tools_build_sdk_requests_and_forward_account() -> None:
 
 def test_tools_reuse_account_list_cache_for_account_resolution() -> None:
     client = _FakeClient()
-    config = TossInvestRemoteServerConfig(
+    config = TossInvestMCPServerConfig(
         client_id="client-id",
         client_secret="client-secret",
         account_number="12345678901",
     )
-    tools = TossInvestRemoteTools(
+    tools = TossInvestMCPTools(
         cast(ClientContextFactory, lambda: _FakeClientContext(client)),
         account_resolver=config.account_seq_for_tool,
         account_list_cache_getter=config.cached_account_list,

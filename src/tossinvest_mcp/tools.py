@@ -28,7 +28,7 @@ type AccountListObserver = Callable[[list[Account]], None]
 
 
 @dataclass(frozen=True, slots=True)
-class TossInvestRemoteTools:
+class TossInvestMCPTools:
     """Read-only TossInvest operations exposed through MCP."""
 
     client_factory: ClientContextFactory

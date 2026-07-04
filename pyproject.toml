@@ -3,14 +3,14 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "tossinvest-mcp-remote"
-version = "0.1.2"
-description = "Remote MCP server for TossInvest OpenAPI"
+name = "tossinvest-mcp"
+version = "0.2.0"
+description = "MCP server for TossInvest OpenAPI"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 authors = [
-  { name = "TossInvest MCP Remote Maintainers" },
+  { name = "TossInvest MCP Maintainers" },
 ]
 keywords = ["toss", "securities", "openapi", "mcp", "chatgpt", "codex"]
 classifiers = [
@@ -46,7 +46,7 @@ dev = [
 ]
 
 [project.scripts]
-tossinvest-mcp-remote = "tossinvest_mcp_remote.cli:main"
+tossinvest-mcp = "tossinvest_mcp.cli:main"
 
 [dependency-groups]
 dev = [
@@ -61,21 +61,21 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/dhoon-dev/tossinvest-mcp-remote"
-Source = "https://github.com/dhoon-dev/tossinvest-mcp-remote"
+Homepage = "https://github.com/dhoon-dev/tossinvest-mcp"
+Source = "https://github.com/dhoon-dev/tossinvest-mcp"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/tossinvest_mcp_remote"]
+packages = ["src/tossinvest_mcp"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel.force-include]
-"src/tossinvest_mcp_remote/py.typed" = "tossinvest_mcp_remote/py.typed"
+"src/tossinvest_mcp/py.typed" = "tossinvest_mcp/py.typed"
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "src/tossinvest_mcp_remote",
+  "src/tossinvest_mcp",
   "tests",
   "docs",
   "examples",
@@ -112,10 +112,10 @@ ignore = [
 "examples/**/*.py" = ["D", "INP001", "T201"]
 "scripts/**/*.py" = ["D", "INP001", "T201"]
 "docs/conf.py" = ["A001", "D100", "INP001"]
-"src/tossinvest_mcp_remote/credentials.py" = ["S404", "S603", "S607"]
-"src/tossinvest_mcp_remote/server.py" = ["PLC0415"]
-"src/tossinvest_mcp_remote/server_http.py" = ["PLC0415"]
-"src/tossinvest_mcp_remote/server_stdio.py" = ["PLC0415"]
+"src/tossinvest_mcp/credentials.py" = ["S404", "S603", "S607"]
+"src/tossinvest_mcp/server.py" = ["PLC0415"]
+"src/tossinvest_mcp/server_http.py" = ["PLC0415"]
+"src/tossinvest_mcp/server_stdio.py" = ["PLC0415"]
 "tests/**/*.py" = ["ANN401", "D", "FBT003", "PLR2004", "S101", "S105", "S106", "S107", "SLF001"]
 
 [tool.ruff.format]

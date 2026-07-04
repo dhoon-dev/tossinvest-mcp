@@ -1,6 +1,6 @@
-# tossinvest-mcp-remote
+# tossinvest-mcp
 
-Remote MCP server for the unofficial TossInvest OpenAPI Python SDK.
+MCP server for the unofficial TossInvest OpenAPI Python SDK.
 
 This project is not affiliated with, endorsed by, or maintained by Toss Securities.
 Verify all behavior against the official API documentation before using this server in
@@ -10,7 +10,7 @@ investment advice. Live order tools are available only through explicit opt-in.
 ## Purpose
 
 `tossinvest-openapi` provides the SDK used by this server. This repository provides
-a production-oriented remote MCP layer for ChatGPT Apps/Connectors and Codex,
+a production-oriented MCP layer for ChatGPT Apps/Connectors and Codex,
 including Streamable HTTP at `/mcp`, while keeping a STDIO entrypoint for local
 Codex usage.
 
@@ -38,7 +38,7 @@ dependencies = [
 ## STDIO
 
 ```bash
-uv run tossinvest-mcp-remote stdio \
+uv run tossinvest-mcp stdio \
   --client-id-command "/usr/bin/security find-generic-password -s tossinvest-api-key -w" \
   --client-secret-command "/usr/bin/security find-generic-password -s tossinvest-secret-key -w" \
   --account "12345678901"
@@ -50,7 +50,7 @@ Environment-variable launch is also supported by the CLI layer:
 TOSSINVEST_CLIENT_ID="..." \
 TOSSINVEST_CLIENT_SECRET="..." \
 TOSSINVEST_ACCOUNT_NO="12345678901" \
-uv run tossinvest-mcp-remote stdio
+uv run tossinvest-mcp stdio
 ```
 
 STDIO mode writes MCP protocol messages to stdout only. Diagnostics go to stderr.
@@ -59,7 +59,7 @@ Local Codex STDIO can register live order tools, but this is a local trust decis
 and does not perform OAuth scope checks:
 
 ```bash
-uv run tossinvest-mcp-remote stdio \
+uv run tossinvest-mcp stdio \
   --client-id-command "/usr/bin/security find-generic-password -s tossinvest-api-key -w" \
   --client-secret-command "/usr/bin/security find-generic-password -s tossinvest-secret-key -w" \
   --account "12345678901" \
@@ -72,7 +72,7 @@ uv run tossinvest-mcp-remote stdio \
 Local development binds to localhost by default:
 
 ```bash
-uv run tossinvest-mcp-remote serve-http \
+uv run tossinvest-mcp serve-http \
   --host 127.0.0.1 \
   --port 8000 \
   --client-id-command "/usr/bin/security find-generic-password -s tossinvest-api-key -w" \
@@ -83,7 +83,7 @@ uv run tossinvest-mcp-remote serve-http \
 Behind a reverse proxy or in a container, bind explicitly:
 
 ```bash
-uv run tossinvest-mcp-remote serve-http \
+uv run tossinvest-mcp serve-http \
   --host 0.0.0.0 \
   --port 8000 \
   --trusted-proxy "10.0.0.0/8" \
@@ -118,7 +118,7 @@ For ChatGPT Apps/Connectors, prefer OAuth resource-server mode with an external
 authorization server such as Keycloak, Zitadel, Auth0, or Ory Hydra:
 
 ```bash
-uv run tossinvest-mcp-remote serve-http \
+uv run tossinvest-mcp serve-http \
   --host 0.0.0.0 \
   --port 8000 \
   --trusted-proxy "10.0.0.0/8" \
@@ -216,7 +216,7 @@ orders. HTTP deployments require at least one configured live-order scope, and e
 tool call must include an OAuth access token containing every configured scope:
 
 ```bash
-uv run tossinvest-mcp-remote serve-http \
+uv run tossinvest-mcp serve-http \
   --host 0.0.0.0 \
   --port 8000 \
   --client-id-command "cat /run/secrets/tossinvest_client_id" \

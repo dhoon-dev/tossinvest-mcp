@@ -2,7 +2,7 @@
 
 ## Project Scope
 
-This repository provides an unofficial remote MCP server for the TossInvest OpenAPI SDK.
+This repository provides an unofficial MCP server for the TossInvest OpenAPI SDK.
 It is a transport and tool-registration layer, not a replacement SDK.
 
 Generated source, documentation, comments, test names, and commit-facing text in this
@@ -60,7 +60,7 @@ uv build
 ## Commit Messages
 
 - Use Conventional Commits-style titles:
-  - `feat: add remote MCP server`
+  - `feat: add MCP server`
   - `fix: preserve account cache TTL`
   - `chore: update CI workflow`
 - Write a title, then one blank line, then a body:

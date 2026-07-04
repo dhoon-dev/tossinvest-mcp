@@ -1,4 +1,4 @@
-"""Configuration for the remote MCP server."""
+"""Configuration for the TossInvest MCP server."""
 
 from __future__ import annotations
 
@@ -18,11 +18,11 @@ from tossinvest.config import (
 from .accounts import find_account_by_number
 
 DEFAULT_ACCOUNT_CACHE_TTL = 1.0
-DEFAULT_SERVER_USER_AGENT = f"{DEFAULT_USER_AGENT} tossinvest-mcp-remote/0.1.0"
+DEFAULT_SERVER_USER_AGENT = f"{DEFAULT_USER_AGENT} tossinvest-mcp/0.2.0"
 
 
 @dataclass(frozen=True, slots=True)
-class TossInvestRemoteServerConfig:
+class TossInvestMCPServerConfig:
     """Settings used to construct SDK clients for MCP tool calls."""
 
     client_id: str = field(repr=False)

@@ -3,9 +3,9 @@ from __future__ import annotations
 import pytest
 from pytest_httpx import HTTPXMock
 
-from tossinvest_mcp_remote.cli import config_from_args, http_config_from_args, parse_args
-from tossinvest_mcp_remote.config import TossInvestRemoteServerConfig
-from tossinvest_mcp_remote.errors import TossInvestMCPRemoteConfigError
+from tossinvest_mcp.cli import config_from_args, http_config_from_args, parse_args
+from tossinvest_mcp.config import TossInvestMCPServerConfig
+from tossinvest_mcp.errors import TossInvestMCPConfigError
 
 from .conftest import BASE_URL, account_payload, add_api_response, add_token_response
 
@@ -33,7 +33,7 @@ def test_config_from_args_preserves_explicit_credentials() -> None:
 
     config = config_from_args(args)
 
-    assert config == TossInvestRemoteServerConfig(
+    assert config == TossInvestMCPServerConfig(
         client_id="client-id",
         client_secret="client-secret",
         account_number="12345678901",
@@ -186,7 +186,7 @@ def test_config_rejects_account_number_and_seq_from_environment(
     monkeypatch.setenv("TOSSINVEST_ACCOUNT_SEQ", "1")
     args = parse_args(["stdio", "--client-id", "client-id", "--client-secret", "client-secret"])
 
-    with pytest.raises(TossInvestMCPRemoteConfigError):
+    with pytest.raises(TossInvestMCPConfigError):
         config_from_args(args)
 
 
@@ -233,7 +233,7 @@ def test_http_config_rejects_incomplete_oauth_settings() -> None:
         ]
     )
 
-    with pytest.raises(TossInvestMCPRemoteConfigError):
+    with pytest.raises(TossInvestMCPConfigError):
         http_config_from_args(args)
 
 
@@ -257,12 +257,12 @@ def test_http_config_rejects_static_bearer_with_oauth(
         ]
     )
 
-    with pytest.raises(TossInvestMCPRemoteConfigError):
+    with pytest.raises(TossInvestMCPConfigError):
         http_config_from_args(args)
 
 
 def test_config_create_client_does_not_resolve_account_number() -> None:
-    config = TossInvestRemoteServerConfig(
+    config = TossInvestMCPServerConfig(
         client_id="client-id",
         client_secret="client-secret",
         account_number="12345678901",
@@ -280,7 +280,7 @@ def test_config_resolves_account_number_once(httpx_mock: HTTPXMock) -> None:
         url=f"{BASE_URL}/api/v1/accounts",
         result=[account_payload(account_seq=1)],
     )
-    config = TossInvestRemoteServerConfig(
+    config = TossInvestMCPServerConfig(
         client_id="client-id",
         client_secret="client-secret",
         account_number="12345678901",
@@ -302,7 +302,7 @@ def test_config_refreshes_cached_account_after_ttl(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     current_time = 100.0
-    monkeypatch.setattr("tossinvest_mcp_remote.config.time.monotonic", lambda: current_time)
+    monkeypatch.setattr("tossinvest_mcp.config.time.monotonic", lambda: current_time)
     add_token_response(httpx_mock, token="token-1")
     add_api_response(
         httpx_mock,
@@ -317,7 +317,7 @@ def test_config_refreshes_cached_account_after_ttl(
         url=f"{BASE_URL}/api/v1/accounts",
         result=[account_payload(account_seq=2)],
     )
-    config = TossInvestRemoteServerConfig(
+    config = TossInvestMCPServerConfig(
         client_id="client-id",
         client_secret="client-secret",
         account_number="12345678901",

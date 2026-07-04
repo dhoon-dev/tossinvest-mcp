@@ -1,6 +1,6 @@
 # Docker Compose examples
 
-These examples run `tossinvest-mcp-remote` behind a reverse proxy. Copy the
+These examples run `tossinvest-mcp` behind a reverse proxy. Copy the
 `.env.example` next to the proxy example you use to `.env`, then run that
 compose file explicitly.
 

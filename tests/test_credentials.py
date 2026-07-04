@@ -5,8 +5,8 @@ import sys
 
 import pytest
 
-from tossinvest_mcp_remote.credentials import resolve_credential
-from tossinvest_mcp_remote.errors import CredentialHelperError
+from tossinvest_mcp.credentials import resolve_credential
+from tossinvest_mcp.errors import CredentialHelperError
 
 
 def _python_command(source: str) -> str:

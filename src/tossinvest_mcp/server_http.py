@@ -15,8 +15,8 @@ from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from .config import TossInvestRemoteServerConfig
-from .errors import TossInvestMCPRemoteConfigError
+from .config import TossInvestMCPServerConfig
+from .errors import TossInvestMCPConfigError
 from .health import healthz
 from .oauth import MCPResourceServerAuth, OAuthResourceServerConfig, create_mcp_resource_server_auth
 from .server import create_server
@@ -36,12 +36,12 @@ class HTTPServerConfig:
 
 
 def create_http_app(
-    config: TossInvestRemoteServerConfig,
+    config: TossInvestMCPServerConfig,
     http_config: HTTPServerConfig | None = None,
 ) -> Starlette:
     """Create a Starlette app exposing `/mcp` and `/healthz`."""
     if config.enable_live_orders and config.allow_stdio_live_orders:
-        raise TossInvestMCPRemoteConfigError(
+        raise TossInvestMCPConfigError(
             "Use --live-order-required-scope for HTTP live order tools. "
             "--allow-stdio-live-orders is only for local STDIO deployments."
         )
@@ -93,7 +93,7 @@ def create_http_app(
     )
 
 
-def run_http(config: TossInvestRemoteServerConfig, http_config: HTTPServerConfig) -> None:
+def run_http(config: TossInvestMCPServerConfig, http_config: HTTPServerConfig) -> None:
     """Run the Streamable HTTP server with uvicorn."""
     import uvicorn
 
@@ -193,7 +193,7 @@ def _is_mcp_path(scope: Scope) -> bool:
 
 
 def _protected_resource_metadata_routes(
-    config: TossInvestRemoteServerConfig,
+    config: TossInvestMCPServerConfig,
     http_config: HTTPServerConfig,
     mcp_auth: MCPResourceServerAuth | None,
 ) -> list[Route]:

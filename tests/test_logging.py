@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tossinvest_mcp_remote.logging import REDACTED, redact_mapping, redact_text
+from tossinvest_mcp.logging import REDACTED, redact_mapping, redact_text
 
 
 def test_redact_text_removes_bearer_token() -> None:

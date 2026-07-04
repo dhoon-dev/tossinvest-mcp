@@ -11,8 +11,8 @@ Add a local MCP server to `~/.codex/config.toml`:
 command = "uvx"
 args = [
   "--from",
-  "git+https://github.com/dhoon-dev/tossinvest-mcp-remote.git@main",
-  "tossinvest-mcp-remote",
+  "git+https://github.com/dhoon-dev/tossinvest-mcp.git@main",
+  "tossinvest-mcp",
   "stdio",
   "--client-id-command",
   "/usr/bin/security find-generic-password -s tossinvest-api-key -w",
@@ -36,8 +36,8 @@ Local STDIO can expose live order tools for a trusted personal Codex setup:
 command = "uvx"
 args = [
   "--from",
-  "git+https://github.com/dhoon-dev/tossinvest-mcp-remote.git@main",
-  "tossinvest-mcp-remote",
+  "git+https://github.com/dhoon-dev/tossinvest-mcp.git@main",
+  "tossinvest-mcp",
   "stdio",
   "--client-id-command",
   "/usr/bin/security find-generic-password -s tossinvest-api-key -w",

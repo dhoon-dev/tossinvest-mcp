@@ -3,12 +3,12 @@ from __future__ import annotations
 import asyncio
 import json
 
-from tossinvest_mcp_remote.config import TossInvestRemoteServerConfig
-from tossinvest_mcp_remote.server import create_server
+from tossinvest_mcp.config import TossInvestMCPServerConfig
+from tossinvest_mcp.server import create_server
 
 
 async def main() -> None:
-    server = create_server(TossInvestRemoteServerConfig("client-id", "client-secret"))
+    server = create_server(TossInvestMCPServerConfig("client-id", "client-secret"))
     tools = await server.list_tools()
     print(json.dumps([tool.name for tool in tools], indent=2))
 

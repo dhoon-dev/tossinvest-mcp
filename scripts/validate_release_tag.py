@@ -48,9 +48,9 @@ def _version_from_tag(tag: str) -> str | None:
 def _read_versions() -> dict[str, str]:
     return {
         "pyproject.toml [project.version]": _read_project_version(),
-        "uv.lock package tossinvest-mcp-remote": _read_lock_version(),
-        "src/tossinvest_mcp_remote/_version.py __version__": _read_literal_assignment(
-            ROOT / "src" / "tossinvest_mcp_remote" / "_version.py", "__version__"
+        "uv.lock package tossinvest-mcp": _read_lock_version(),
+        "src/tossinvest_mcp/_version.py __version__": _read_literal_assignment(
+            ROOT / "src" / "tossinvest_mcp" / "_version.py", "__version__"
         ),
         "docs/conf.py release": _read_literal_assignment(ROOT / "docs" / "conf.py", "release"),
     }
@@ -74,14 +74,14 @@ def _read_lock_version() -> str:
         msg = "Missing package list in uv.lock."
         raise TypeError(msg)
     for package in packages:
-        if not isinstance(package, dict) or package.get("name") != "tossinvest-mcp-remote":
+        if not isinstance(package, dict) or package.get("name") != "tossinvest-mcp":
             continue
         version = package.get("version")
         if isinstance(version, str):
             return version
-        msg = "Missing string version for tossinvest-mcp-remote in uv.lock."
+        msg = "Missing string version for tossinvest-mcp in uv.lock."
         raise TypeError(msg)
-    msg = "Missing tossinvest-mcp-remote package in uv.lock."
+    msg = "Missing tossinvest-mcp package in uv.lock."
     raise ValueError(msg)
 
 

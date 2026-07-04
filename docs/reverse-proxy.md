@@ -15,7 +15,7 @@ Pass only trusted and sanitized identity signals to the app. Configure trusted p
 networks explicitly:
 
 ```bash
-uv run tossinvest-mcp-remote serve-http \
+uv run tossinvest-mcp serve-http \
   --host 0.0.0.0 \
   --port 8000 \
   --trusted-proxy "10.0.0.0/8"

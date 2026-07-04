@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.2.0
+
+- Rename the package, CLI, and import package to `tossinvest-mcp`.
+
 ## 0.1.2
 
 - Pin `tossinvest-openapi` to the v1.2.0 SDK release tag.

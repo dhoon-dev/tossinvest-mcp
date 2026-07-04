@@ -1,4 +1,4 @@
-tossinvest-mcp-remote
+tossinvest-mcp
 =====================
 
 .. toctree::
