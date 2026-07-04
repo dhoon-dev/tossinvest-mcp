@@ -49,7 +49,23 @@ uv run --locked --group docs sphinx-build -W -b html docs docs/_build/html
 uv build
 ```
 
-7. Report the changed version, changed files, and validation commands.
+7. When the user asks to publish the release tag, create the version bump
+   commit with `$toss-commit-changes`, then tag and push it:
+
+```bash
+git tag vX.Y.Z
+git push origin main
+git push origin vX.Y.Z
+```
+
+8. Pushing `vX.Y.Z` starts the `Release` GitHub Actions workflow. The workflow
+   checks out the tag, reruns the release quality gate, builds package and
+   documentation artifacts, and creates a draft GitHub Release with generated
+   notes. Use the manual `Release` workflow dispatch only when publishing a
+   non-draft or prerelease release intentionally.
+
+9. Report the changed version, changed files, validation commands, pushed tag,
+   and GitHub Actions release workflow status if it was available.
 
 ## Commit Guidance
 
