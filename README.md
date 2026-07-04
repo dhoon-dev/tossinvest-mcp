@@ -9,13 +9,13 @@ investment advice. Live order tools are available only through explicit opt-in.
 
 ## Purpose
 
-`tossinvest-openapi` provides the SDK and a local STDIO MCP server. This repository
-exists separately to provide a production-oriented remote MCP layer for ChatGPT
-Apps/Connectors and Codex, including Streamable HTTP at `/mcp`, while keeping a
-STDIO entrypoint for local Codex usage.
+`tossinvest-openapi` provides the SDK used by this server. This repository provides
+a production-oriented remote MCP layer for ChatGPT Apps/Connectors and Codex,
+including Streamable HTTP at `/mcp`, while keeping a STDIO entrypoint for local
+Codex usage.
 
 This repository does not vendor or reimplement the SDK. It depends on
-`tossinvest-openapi[mcp]` and calls public APIs such as `TossInvestClient`.
+`tossinvest-openapi` and calls public APIs such as `TossInvestClient`.
 
 ## Installation
 
@@ -23,7 +23,7 @@ Development currently uses the public HTTPS Git dependency pinned to the SDK rel
 
 ```toml
 dependencies = [
-  "tossinvest-openapi[mcp] @ git+https://github.com/dhoon-dev/tossinvest-openapi.git@v1.1.0",
+  "tossinvest-openapi @ git+https://github.com/dhoon-dev/tossinvest-openapi.git@v1.2.0",
 ]
 ```
 
@@ -31,7 +31,7 @@ When a matching PyPI package is published, deployments can use PyPI:
 
 ```toml
 dependencies = [
-  "tossinvest-openapi[mcp]>=1.1.0",
+  "tossinvest-openapi>=1.2.0",
 ]
 ```
 

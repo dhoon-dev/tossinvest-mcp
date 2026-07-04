@@ -159,10 +159,10 @@ class _FakeClient:
         self.closed = False
 
     def get_supported_openapi_version(self) -> str:
-        return "1.1.1"
+        return "1.1.5"
 
     def get_latest_openapi_version(self) -> str:
-        return "1.1.2"
+        return "1.1.5"
 
 
 class _FakeClientContext(AbstractContextManager[_FakeClient]):
@@ -216,8 +216,8 @@ def test_openapi_version_tools_call_sdk_client() -> None:
     client = _FakeClient()
     tools = TossInvestRemoteTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
 
-    assert tools.get_supported_openapi_version() == "1.1.1"
-    assert tools.get_latest_openapi_version() == "1.1.2"
+    assert tools.get_supported_openapi_version() == "1.1.5"
+    assert tools.get_latest_openapi_version() == "1.1.5"
 
 
 def test_account_scoped_tools_forward_account_override() -> None:

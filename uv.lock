@@ -1001,14 +1001,14 @@ wheels = [
 
 [[package]]
 name = "tossinvest-mcp-remote"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
     { name = "pydantic" },
     { name = "pyjwt", extra = ["crypto"] },
-    { name = "tossinvest-openapi", extra = ["mcp"] },
+    { name = "tossinvest-openapi" },
 ]
 
 [package.optional-dependencies]
@@ -1047,7 +1047,7 @@ requires-dist = [
     { name = "pytest-httpx", marker = "extra == 'dev'", specifier = ">=0.30" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12" },
     { name = "starlette", marker = "extra == 'http'", specifier = ">=0.37,<1" },
-    { name = "tossinvest-openapi", extras = ["mcp"], git = "https://github.com/dhoon-dev/tossinvest-openapi.git?rev=v1.1.0" },
+    { name = "tossinvest-openapi", git = "https://github.com/dhoon-dev/tossinvest-openapi.git?rev=v1.2.0" },
     { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.1a15" },
     { name = "uvicorn", marker = "extra == 'http'", specifier = ">=0.30,<1" },
 ]
@@ -1065,16 +1065,11 @@ docs = [{ name = "sphinx", specifier = ">=9.1,<10" }]
 
 [[package]]
 name = "tossinvest-openapi"
-version = "1.1.0"
-source = { git = "https://github.com/dhoon-dev/tossinvest-openapi.git?rev=v1.1.0#44df41dc62fc00059d62049cf934cedc6303c3e5" }
+version = "1.2.0"
+source = { git = "https://github.com/dhoon-dev/tossinvest-openapi.git?rev=v1.2.0#7de6df5642f33eb9eda6cc15edb833cf885896f5" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
-]
-
-[package.optional-dependencies]
-mcp = [
-    { name = "mcp" },
 ]
 
 [[package]]
