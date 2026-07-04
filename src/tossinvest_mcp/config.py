@@ -14,11 +14,19 @@ from tossinvest.config import (
     DEFAULT_TIMEOUT,
     DEFAULT_USER_AGENT,
 )
+from tossinvest_extensions import TossInvestExtensionsClient
+from tossinvest_extensions.config import (
+    DEFAULT_BASE_URL as DEFAULT_EXTENSIONS_BASE_URL,
+)
+from tossinvest_extensions.config import (
+    DEFAULT_USER_AGENT as DEFAULT_EXTENSIONS_USER_AGENT,
+)
 
 from .accounts import find_account_by_number
 
 DEFAULT_ACCOUNT_CACHE_TTL = 1.0
 DEFAULT_SERVER_USER_AGENT = f"{DEFAULT_USER_AGENT} tossinvest-mcp/0.2.0"
+DEFAULT_SERVER_EXTENSIONS_USER_AGENT = f"{DEFAULT_EXTENSIONS_USER_AGENT} tossinvest-mcp/0.2.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,9 +38,11 @@ class TossInvestMCPServerConfig:
     account: str | int | None = None
     account_number: str | None = None
     base_url: str = DEFAULT_BASE_URL
+    extensions_base_url: str = DEFAULT_EXTENSIONS_BASE_URL
     timeout: float | httpx.Timeout = DEFAULT_TIMEOUT
     max_retries: int = DEFAULT_MAX_RETRIES
     user_agent: str = DEFAULT_SERVER_USER_AGENT
+    extensions_user_agent: str = DEFAULT_SERVER_EXTENSIONS_USER_AGENT
     account_cache_ttl: float = DEFAULT_ACCOUNT_CACHE_TTL
     enable_live_orders: bool = False
     live_order_required_scopes: tuple[str, ...] = ()
@@ -61,6 +71,15 @@ class TossInvestMCPServerConfig:
             timeout=self.timeout,
             max_retries=self.max_retries,
             user_agent=self.user_agent,
+        )
+
+    def create_extensions_client(self) -> TossInvestExtensionsClient:
+        """Create a synchronous web API extensions client for one MCP tool call."""
+        return TossInvestExtensionsClient(
+            base_url=self.extensions_base_url,
+            timeout=self.timeout,
+            max_retries=self.max_retries,
+            user_agent=self.extensions_user_agent,
         )
 
     def account_seq_for_tool(self, override: str | int | None = None) -> str | int | None:

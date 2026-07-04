@@ -17,7 +17,7 @@ from tossinvest import (
     PriceResponse,
 )
 
-from tossinvest_mcp.client_factory import ClientContextFactory
+from tossinvest_mcp.client_factory import ClientContextFactory, ExtensionsClientContextFactory
 from tossinvest_mcp.config import TossInvestMCPServerConfig
 from tossinvest_mcp.tools import TossInvestMCPTools
 
@@ -181,6 +181,54 @@ class _FakeClientContext(AbstractContextManager[_FakeClient]):
         self.client.closed = True
 
 
+class _Community:
+    stock_code: str | None = None
+    sort: str | None = None
+    cursor: int | str | None = None
+    count: int | None = None
+
+    def get_stock_comments(
+        self,
+        stock_code: str,
+        *,
+        sort: str = "POPULAR",
+        cursor: int | str | None = None,
+        count: int | None = None,
+    ) -> dict[str, object]:
+        self.stock_code = stock_code
+        self.sort = sort
+        self.cursor = cursor
+        self.count = count
+        return {
+            "results": [{"commentId": 1002, "message": {"message": "Community comment body"}}],
+            "key": 1002,
+            "totalCount": 7,
+            "hasNext": True,
+        }
+
+
+class _FakeExtensionsClient:
+    def __init__(self) -> None:
+        self.community = _Community()
+        self.closed = False
+
+
+class _FakeExtensionsClientContext(AbstractContextManager[_FakeExtensionsClient]):
+    def __init__(self, client: _FakeExtensionsClient) -> None:
+        self.client = client
+
+    def __enter__(self) -> _FakeExtensionsClient:
+        return self.client
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        self.client.closed = True
+
+
 def test_tools_dump_sdk_models_with_official_aliases() -> None:
     client = _FakeClient()
     tools = TossInvestMCPTools(cast(ClientContextFactory, lambda: _FakeClientContext(client)))
@@ -284,6 +332,32 @@ def test_live_order_tools_build_sdk_requests_and_forward_account() -> None:
         "price": "71000",
     }
     assert client.orders.canceled_order_id == "order-1"
+
+
+def test_stock_comments_tool_uses_extensions_client() -> None:
+    client = _FakeClient()
+    extensions_client = _FakeExtensionsClient()
+    tools = TossInvestMCPTools(
+        cast(ClientContextFactory, lambda: _FakeClientContext(client)),
+        extensions_client_factory=cast(
+            ExtensionsClientContextFactory,
+            lambda: _FakeExtensionsClientContext(extensions_client),
+        ),
+    )
+
+    result = tools.get_stock_comments("aapl", sort="RECENT", cursor=1003, count=2)
+
+    assert result == {
+        "results": [{"commentId": 1002, "message": {"message": "Community comment body"}}],
+        "key": 1002,
+        "totalCount": 7,
+        "hasNext": True,
+    }
+    assert extensions_client.community.stock_code == "aapl"
+    assert extensions_client.community.sort == "RECENT"
+    assert extensions_client.community.cursor == 1003
+    assert extensions_client.community.count == 2
+    assert extensions_client.closed is True
 
 
 def test_tools_reuse_account_list_cache_for_account_resolution() -> None:

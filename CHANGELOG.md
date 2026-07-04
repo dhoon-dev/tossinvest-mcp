@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add stock community comment lookup via `tossinvest-extensions`.
+
 ## 0.2.0
 
 - Rename the package, CLI, and import package to `tossinvest-mcp`.

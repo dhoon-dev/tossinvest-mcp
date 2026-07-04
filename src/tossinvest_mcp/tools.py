@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from typing import cast
 
@@ -18,9 +19,10 @@ from tossinvest import (
     OrderTimeInForce,
     OrderType,
 )
+from tossinvest_extensions import CommentSortType, TossInvestExtensionsClient
 
 from .accounts import find_account_by_number
-from .client_factory import ClientContextFactory
+from .client_factory import ClientContextFactory, ExtensionsClientContextFactory
 
 type AccountResolver = Callable[[str | int | None], str | int | None]
 type AccountListCacheGetter = Callable[[], list[Account] | None]
@@ -35,6 +37,7 @@ class TossInvestMCPTools:
     account_resolver: AccountResolver | None = None
     account_list_cache_getter: AccountListCacheGetter | None = None
     account_list_observer: AccountListObserver | None = None
+    extensions_client_factory: ExtensionsClientContextFactory | None = None
 
     def get_supported_openapi_version(self) -> str:
         """Return the official OpenAPI version modeled by the SDK release."""
@@ -81,6 +84,25 @@ class TossInvestMCPTools:
         """Return trading warnings for a symbol."""
         with self.client_factory() as client:
             return _dump_model_list(client.stocks.get_stock_warnings(symbol))
+
+    def get_stock_comments(
+        self,
+        stock_code: str,
+        *,
+        sort: CommentSortType = "POPULAR",
+        cursor: int | str | None = None,
+        count: int | None = None,
+    ) -> dict[str, object]:
+        """Return TossInvest stock community comments for a stock code or symbol."""
+        with self._extensions_client() as client:
+            return _dump_model(
+                client.community.get_stock_comments(
+                    stock_code,
+                    sort=sort,
+                    cursor=cursor,
+                    count=count,
+                )
+            )
 
     def get_orderbook(self, symbol: str) -> dict[str, object]:
         """Return the current orderbook for a symbol."""
@@ -299,6 +321,11 @@ class TossInvestMCPTools:
     def _observe_accounts(self, accounts: list[Account]) -> None:
         if self.account_list_observer is not None:
             self.account_list_observer(accounts)
+
+    def _extensions_client(self) -> AbstractContextManager[TossInvestExtensionsClient]:
+        if self.extensions_client_factory is None:
+            return TossInvestExtensionsClient()
+        return self.extensions_client_factory()
 
 
 def _dump_model(value: object) -> dict[str, object]:

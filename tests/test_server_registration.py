@@ -55,6 +55,7 @@ async def test_create_server_registers_read_only_tools_only() -> None:
     assert "get_latest_openapi_version" in tool_names
     assert "list_accounts" in tool_names
     assert "find_account_by_number" in tool_names
+    assert "get_stock_comments" in tool_names
     assert "get_price" in tool_names
     assert "get_buying_power" in tool_names
     assert {"create_order", "modify_order", "cancel_order"}.isdisjoint(tool_names)
@@ -93,6 +94,10 @@ async def test_read_only_tool_schemas_expose_sdk_enums() -> None:
         "USD",
     ]
     assert _property_enum(tools["get_buying_power"].inputSchema, "currency") == ["KRW", "USD"]
+    assert _property_enum(tools["get_stock_comments"].inputSchema, "sort") == [
+        "POPULAR",
+        "RECENT",
+    ]
 
 
 async def test_openapi_version_tool_schemas_are_argument_free() -> None:

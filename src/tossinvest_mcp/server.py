@@ -16,6 +16,7 @@ from tossinvest import (
     OrderTimeInForce,
     OrderType,
 )
+from tossinvest_extensions import CommentSortType
 
 from .client_factory import ClientContextFactory
 from .config import TossInvestMCPServerConfig
@@ -37,12 +38,13 @@ ACCOUNT_NO_DESCRIPTION = (
 )
 READ_ONLY_SERVER_INSTRUCTIONS = (
     "Use this TossInvest OpenAPI MCP server to read API metadata, discover accounts, inspect "
-    "stocks, retrieve market data and market information, and view account-scoped information."
+    "stocks, retrieve market data and market information, read stock community comments, and "
+    "view account-scoped information."
 )
 LIVE_ORDER_SERVER_INSTRUCTIONS = (
     "Use this TossInvest OpenAPI MCP server to read API metadata, discover accounts, inspect "
-    "stocks, retrieve market data and market information, view account-scoped information, "
-    "and place, modify, or cancel live orders."
+    "stocks, retrieve market data and market information, read stock community comments, view "
+    "account-scoped information, and place, modify, or cancel live orders."
 )
 READ_ONLY_TOOL_ANNOTATIONS = ToolAnnotations(readOnlyHint=True)
 LIVE_ORDER_TOOL_ANNOTATIONS = ToolAnnotations(
@@ -76,6 +78,7 @@ def create_server(
 
     tools = TossInvestMCPTools(
         client_factory or config.create_client,
+        extensions_client_factory=config.create_extensions_client,
         account_resolver=config.account_seq_for_tool,
         account_list_cache_getter=config.cached_account_list,
         account_list_observer=config.cache_account_list,
@@ -92,6 +95,7 @@ def create_server(
     _register_openapi_tools(server, tools)
     _register_account_tools(server, tools)
     _register_stock_tools(server, tools)
+    _register_community_tools(server, tools)
     _register_market_data_tools(server, tools)
     _register_market_info_tools(server, tools)
     _register_account_scoped_tools(server, tools)
@@ -182,6 +186,31 @@ def _register_stock_tools(server: FastMCP, tools: TossInvestMCPTools) -> None:
         Rate limit group: STOCK. On 429, respect Retry-After or X-RateLimit-Reset.
         """
         return tools.get_stock_warnings(symbol)
+
+
+def _register_community_tools(server: FastMCP, tools: TossInvestMCPTools) -> None:
+    """Register unofficial TossInvest web community tools."""
+    read_only_annotations = READ_ONLY_TOOL_ANNOTATIONS
+
+    @server.tool(annotations=read_only_annotations)
+    def get_stock_comments(
+        stock_code: str,
+        sort: CommentSortType = "POPULAR",
+        cursor: int | str | None = None,
+        count: int | None = None,
+    ) -> dict[str, object]:
+        """Return stock community comments for a TossInvest stock page.
+
+        Unofficial TossInvest web community API. On 429, respect Retry-After or
+        X-RateLimit-Reset. `stock_code` accepts common codes and symbols such as
+        000660 or AAPL.
+        """
+        return tools.get_stock_comments(
+            stock_code,
+            sort=sort,
+            cursor=cursor,
+            count=count,
+        )
 
 
 def _register_market_data_tools(server: FastMCP, tools: TossInvestMCPTools) -> None:

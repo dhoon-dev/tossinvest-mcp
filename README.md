@@ -15,7 +15,9 @@ including Streamable HTTP at `/mcp`, while keeping a STDIO entrypoint for local
 Codex usage.
 
 This repository does not vendor or reimplement the SDK. It depends on
-`tossinvest-openapi` and calls public APIs such as `TossInvestClient`.
+`tossinvest-openapi` and calls public APIs such as `TossInvestClient`. Stock
+community comment tools use `tossinvest-extensions`, which wraps unofficial
+TossInvest web APIs that may change without notice.
 
 ## Installation
 
@@ -24,6 +26,7 @@ Development currently uses the public HTTPS Git dependency pinned to the SDK rel
 ```toml
 dependencies = [
   "tossinvest-openapi @ git+https://github.com/dhoon-dev/tossinvest-openapi.git@v1.2.0",
+  "tossinvest-extensions @ git+https://github.com/dhoon-dev/tossinvest-extensions.git@v0.1.0",
 ]
 ```
 
