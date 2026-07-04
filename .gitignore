@@ -3,6 +3,7 @@ secrets/
 .venv/
 .pytest_cache/
 .ruff_cache/
+.serena/
 .ty/
 __pycache__/
 *.py[cod]
