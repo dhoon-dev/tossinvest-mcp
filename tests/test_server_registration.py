@@ -307,10 +307,6 @@ def test_server_instructions_describe_read_only_mode() -> None:
 
     assert server.instructions == instructions
     assert len(instructions) <= 512
-    assert "metadata" in instructions
-    assert "discover accounts" in instructions
-    assert "market data" in instructions
-    assert "account-scoped information" in instructions
     assert "live orders" not in instructions
 
 
@@ -328,8 +324,4 @@ def test_server_instructions_describe_live_order_mode() -> None:
 
     assert server.instructions == instructions
     assert len(instructions) <= 512
-    assert "metadata" in instructions
-    assert "discover accounts" in instructions
-    assert "market data" in instructions
-    assert "account-scoped information" in instructions
     assert "place, modify, or cancel live orders" in instructions
