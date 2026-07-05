@@ -16,7 +16,7 @@ from tossinvest import (
     OrderTimeInForce,
     OrderType,
 )
-from tossinvest_extensions import CommentSortType
+from tossinvest_extensions import CommentSortType, ReplySortType
 
 from .client_factory import ClientContextFactory
 from .config import TossInvestMCPServerConfig
@@ -210,6 +210,28 @@ def _register_community_tools(server: FastMCP, tools: TossInvestMCPTools) -> Non
             sort=sort,
             cursor=cursor,
             count=count,
+        )
+
+    @server.tool(annotations=read_only_annotations)
+    def get_comment_replies(
+        comment_id: int | str,
+        sort: ReplySortType = "POPULAR",
+        cursor: int | str | None = None,
+        last_like_count: int | None = None,
+    ) -> dict[str, object]:
+        """Return replies for a TossInvest community comment.
+
+        Unofficial TossInvest web community API. On 429, respect Retry-After or
+        X-RateLimit-Reset. `comment_id` is a parent comment identifier returned
+        by get_stock_comments. For pagination, pass `key` as `cursor`; when
+        available, pass the last reply's `statistic.likeCount` as
+        `last_like_count`.
+        """
+        return tools.get_comment_replies(
+            comment_id,
+            sort=sort,
+            cursor=cursor,
+            last_like_count=last_like_count,
         )
 
 

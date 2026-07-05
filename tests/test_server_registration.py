@@ -56,6 +56,7 @@ async def test_create_server_registers_read_only_tools_only() -> None:
     assert "list_accounts" in tool_names
     assert "find_account_by_number" in tool_names
     assert "get_stock_comments" in tool_names
+    assert "get_comment_replies" in tool_names
     assert "get_price" in tool_names
     assert "get_buying_power" in tool_names
     assert {"create_order", "modify_order", "cancel_order"}.isdisjoint(tool_names)
@@ -97,6 +98,11 @@ async def test_read_only_tool_schemas_expose_sdk_enums() -> None:
     assert _property_enum(tools["get_stock_comments"].inputSchema, "sort") == [
         "POPULAR",
         "RECENT",
+    ]
+    assert _property_enum(tools["get_comment_replies"].inputSchema, "sort") == [
+        "POPULAR",
+        "NEWEST",
+        "OLDEST",
     ]
 
 

@@ -26,7 +26,7 @@ Development currently uses the public HTTPS Git dependency pinned to the SDK rel
 ```toml
 dependencies = [
   "tossinvest-openapi @ git+https://github.com/dhoon-dev/tossinvest-openapi.git@v1.2.0",
-  "tossinvest-extensions @ git+https://github.com/dhoon-dev/tossinvest-extensions.git@v0.1.0",
+  "tossinvest-extensions @ git+https://github.com/dhoon-dev/tossinvest-extensions.git@v0.2.0",
 ]
 ```
 
@@ -201,6 +201,7 @@ The default tool list is read-only:
 - OpenAPI metadata: `get_supported_openapi_version`, `get_latest_openapi_version`
 - account lookup: `list_accounts`, `find_account_by_number`
 - stock information: `get_stock`, `get_stocks`, `get_stock_warnings`
+- stock community: `get_stock_comments`, `get_comment_replies`
 - market data: `get_orderbook`, `get_price`, `get_prices`, `get_trades`,
   `get_price_limit`, `get_candles`
 - market information: `get_exchange_rate`, `get_kr_market_calendar`,

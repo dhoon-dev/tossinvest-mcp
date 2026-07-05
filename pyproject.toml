@@ -26,7 +26,7 @@ classifiers = [
 ]
 dependencies = [
   "tossinvest-openapi @ git+https://github.com/dhoon-dev/tossinvest-openapi.git@v1.2.0",
-  "tossinvest-extensions @ git+https://github.com/dhoon-dev/tossinvest-extensions.git@v0.1.0",
+  "tossinvest-extensions @ git+https://github.com/dhoon-dev/tossinvest-extensions.git@v0.2.0",
   "httpx>=0.27,<1",
   "pydantic>=2.6,<3",
   "mcp>=1.12,<2",

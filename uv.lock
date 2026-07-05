@@ -1001,8 +1001,8 @@ wheels = [
 
 [[package]]
 name = "tossinvest-extensions"
-version = "0.1.0"
-source = { git = "https://github.com/dhoon-dev/tossinvest-extensions.git?rev=v0.1.0#af3d4699327df1f694ecf90579621cf2bc3e292f" }
+version = "0.2.0"
+source = { git = "https://github.com/dhoon-dev/tossinvest-extensions.git?rev=v0.2.0#ba2f7d62a67200f3aacf2db6c762d0f0334177a1" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
@@ -1057,7 +1057,7 @@ requires-dist = [
     { name = "pytest-httpx", marker = "extra == 'dev'", specifier = ">=0.30" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12" },
     { name = "starlette", marker = "extra == 'http'", specifier = ">=0.37,<1" },
-    { name = "tossinvest-extensions", git = "https://github.com/dhoon-dev/tossinvest-extensions.git?rev=v0.1.0" },
+    { name = "tossinvest-extensions", git = "https://github.com/dhoon-dev/tossinvest-extensions.git?rev=v0.2.0" },
     { name = "tossinvest-openapi", git = "https://github.com/dhoon-dev/tossinvest-openapi.git?rev=v1.2.0" },
     { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.1a15" },
     { name = "uvicorn", marker = "extra == 'http'", specifier = ">=0.30,<1" },

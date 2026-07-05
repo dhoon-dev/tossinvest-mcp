@@ -19,7 +19,7 @@ from tossinvest import (
     OrderTimeInForce,
     OrderType,
 )
-from tossinvest_extensions import CommentSortType, TossInvestExtensionsClient
+from tossinvest_extensions import CommentSortType, ReplySortType, TossInvestExtensionsClient
 
 from .accounts import find_account_by_number
 from .client_factory import ClientContextFactory, ExtensionsClientContextFactory
@@ -101,6 +101,25 @@ class TossInvestMCPTools:
                     sort=sort,
                     cursor=cursor,
                     count=count,
+                )
+            )
+
+    def get_comment_replies(
+        self,
+        comment_id: int | str,
+        *,
+        sort: ReplySortType = "POPULAR",
+        cursor: int | str | None = None,
+        last_like_count: int | None = None,
+    ) -> dict[str, object]:
+        """Return TossInvest community replies for a parent comment ID."""
+        with self._extensions_client() as client:
+            return _dump_model(
+                client.community.get_comment_replies(
+                    comment_id,
+                    sort=sort,
+                    cursor=cursor,
+                    last_like_count=last_like_count,
                 )
             )
 

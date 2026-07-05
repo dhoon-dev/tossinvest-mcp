@@ -186,6 +186,9 @@ class _Community:
     sort: str | None = None
     cursor: int | str | None = None
     count: int | None = None
+    comment_id: int | str | None = None
+    reply_sort: str | None = None
+    last_like_count: int | None = None
 
     def get_stock_comments(
         self,
@@ -204,6 +207,31 @@ class _Community:
             "key": 1002,
             "totalCount": 7,
             "hasNext": True,
+        }
+
+    def get_comment_replies(
+        self,
+        comment_id: int | str,
+        *,
+        sort: str = "POPULAR",
+        cursor: int | str | None = None,
+        last_like_count: int | None = None,
+    ) -> dict[str, object]:
+        self.comment_id = comment_id
+        self.reply_sort = sort
+        self.cursor = cursor
+        self.last_like_count = last_like_count
+        return {
+            "results": [
+                {
+                    "commentId": 1004,
+                    "parentId": 1002,
+                    "message": {"message": "Community reply body"},
+                }
+            ],
+            "key": None,
+            "totalCount": 1,
+            "hasNext": False,
         }
 
 
@@ -357,6 +385,38 @@ def test_stock_comments_tool_uses_extensions_client() -> None:
     assert extensions_client.community.sort == "RECENT"
     assert extensions_client.community.cursor == 1003
     assert extensions_client.community.count == 2
+    assert extensions_client.closed is True
+
+
+def test_comment_replies_tool_uses_extensions_client() -> None:
+    client = _FakeClient()
+    extensions_client = _FakeExtensionsClient()
+    tools = TossInvestMCPTools(
+        cast(ClientContextFactory, lambda: _FakeClientContext(client)),
+        extensions_client_factory=cast(
+            ExtensionsClientContextFactory,
+            lambda: _FakeExtensionsClientContext(extensions_client),
+        ),
+    )
+
+    result = tools.get_comment_replies(1002, sort="NEWEST", cursor=1003, last_like_count=12)
+
+    assert result == {
+        "results": [
+            {
+                "commentId": 1004,
+                "parentId": 1002,
+                "message": {"message": "Community reply body"},
+            }
+        ],
+        "key": None,
+        "totalCount": 1,
+        "hasNext": False,
+    }
+    assert extensions_client.community.comment_id == 1002
+    assert extensions_client.community.reply_sort == "NEWEST"
+    assert extensions_client.community.cursor == 1003
+    assert extensions_client.community.last_like_count == 12
     assert extensions_client.closed is True
 
 
